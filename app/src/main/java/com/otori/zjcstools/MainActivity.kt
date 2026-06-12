@@ -122,6 +122,155 @@ private const val RESET_TYPE_DAILY = "DAILY"
 private const val RESET_TYPE_WEEKLY = "WEEKLY"
 private const val RESET_TYPE_ONCE = "ONCE"
 
+private const val UPDATE_PREVIEW_CARD_TITLE = "先遣服更新前瞻"
+private const val UPDATE_PREVIEW_CARD_SUBTITLE = "查看先遣服版本更新公告和调整预告"
+
+data class UpdatePreviewNotice(
+    val id: String,
+    val title: String,
+    val date: String,
+    val summary: String,
+    val body: String
+)
+
+private val updatePreviewNotices = listOf(
+    UpdatePreviewNotice(
+        id = "2026-06-13-maintenance",
+        title = "6月13日停服维护公告",
+        date = "2026-06-13",
+        summary = "6月13日 15:00-17:00 停服维护，新增公会偷菜功能、技能幻彩活动，并调整优化部分技能与玩法体验。",
+        body = """
+由于时空混沌导致坎斯汀世界出现时空乱流，坎斯汀时空管理员将对游戏进行停服维护和调整。
+停服维护期间冒险者将无法登录《杖剑传说》，请各位冒险者届时做好下线准备，以免造成不必要的损失。
+
+【维护时间】
+6月13日 15:00-17:00
+（维护时长将根据实际情况延长或缩短）
+
+【重点更新内容】
+1. 新增公会建筑「交流大厅」，新增公会养殖挂机偷取对应玩法功能
+2. 新增技能幻彩主题活动「神魔争锋」
+3. 战斗技能相关调整及优化
+- 提高「破空斩」百分比与固定值系数10%
+- 提高「真贤庇佑」施加受到伤害降低效果概率：50% -> 100%
+- 调整「灵契秘咒」作用范围：对其1格范围内所有敌方目标 -> 对其身周方形1格范围所有敌方目标
+- 优化「灼炎闪袭」「星炎烬灭」目标选择逻辑，将更优先选择生命百分比最低的敌方目标
+- 优化「灼炎闪袭」自动释放时间现到目标身旁空地的落点判断，使其更稳定地选择可到达的位置
+- 优化增加「天穹凝辉」「蓄能斩」「耀光灵刃」「蓄能光啸」「能量流转」充能层数图标表现
+- 优化部分技能AI释放、移动与索敌逻辑
+- 修复「虚无侵袭」无法触发装备词条「连闪」的问题
+- 修复公会讨伐中「侵魂蚀骨」触发侵蚀效果时，可能出现额外0伤害飘字的问题
+- 修复伙伴阿库娅技能「治疗」无法正确驱散状态的问题
+- 修正部分技能相关文本描述，使其表述更清晰准确：包括「治疗术」「危情守护」「光明剑阵」「回天雨箭」「耀光灵刃」「双耀圣盾」「反打势」「灼炎闪袭」「星炎烬灭」「庇护之誓」「圣约守护」「露水」「生命连接」
+- 修复特定情况下「光耀聚变」的消耗蓄能增伤没有触发生效的原因
+- 修复「百战之锋」满层后的攻击动作特效不变的问题
+- 修复特定情况下在战斗测试模式中未正确触发「撕裂」伤害的问题
+- 修复特定情况下战斗重伤后没有倒地动画的问题
+
+【其他更新内容】
+1. 降低公会挂机工具的租借费用25%
+- 紫色品质工具租借费用：200晨星 -> 150晨星
+- 橙色品质工具租借费用：600晨星 -> 450晨星
+2. 降低伊格尼斯赛季地图「灼焰之径」怪物等级
+3. 降低「梦幻乐园-幻梦共舞」活动玩法评级分数要求
+4. 优化公会「自选3级养殖箱」购买逻辑，将在购买时可选择目标材料直接获得
+5. 优化命运果实探索奇迹和传说品质内容表现效果，以便于更好地区分
+6. 修复人物形象部分初始发型小图标不显示的问题
+7. 修复「嘉年华乐园-躲猫猫」点击地图外围可返回初始区域的问题
+8. 修复伊格尼斯赛季地图「寒霜洞窟十七」木材奖励放怪物群落锁住的问题
+9. 修复特定情况下冰之旅排行榜界面会显示火之旅的排名信息的显示问题
+10. 修复特定情况下讨伐魔物出现无法移动的问题
+11. 修复特定情况下拍卖行会显示一个异常的食谱商品的问题
+12. 调整优化部分UI/UX交互体验
+13. 调整优化部分文本
+14. 修复和优化部分显示问题
+        """.trimIndent()
+    ),
+    UpdatePreviewNotice(
+        id = "2026-06-11-test",
+        title = "6月11日测试公告",
+        date = "2026-06-11",
+        summary = "这是一条用于验证公告列表、详情页和时间倒序排序效果的测试公告。",
+        body = """
+这是6月11日发布的测试公告。
+
+这条公告用于验证新增公告后的排序效果。由于日期早于6月13日，它会显示在6月13日公告下方。
+
+你之后可以把这里替换为真实公告正文。
+        """.trimIndent()
+    ),
+    UpdatePreviewNotice(
+        id = "2026-06-10-test",
+        title = "6月10日测试公告",
+        date = "2026-06-10",
+        summary = "用于验证更早公告加载效果的测试公告。",
+        body = "这是6月10日的测试公告正文。"
+    ),
+    UpdatePreviewNotice(
+        id = "2026-06-09-test",
+        title = "6月9日测试公告",
+        date = "2026-06-09",
+        summary = "用于验证更早公告加载效果的测试公告。",
+        body = "这是6月9日的测试公告正文。"
+    ),
+    UpdatePreviewNotice(
+        id = "2026-06-08-test",
+        title = "6月8日测试公告",
+        date = "2026-06-08",
+        summary = "用于验证更早公告加载效果的测试公告。",
+        body = "这是6月8日的测试公告正文。"
+    ),
+    UpdatePreviewNotice(
+        id = "2026-06-07-test",
+        title = "6月7日测试公告",
+        date = "2026-06-07",
+        summary = "用于验证更早公告加载效果的测试公告。",
+        body = "这是6月7日的测试公告正文。"
+    ),
+    UpdatePreviewNotice(
+        id = "2026-06-06-test",
+        title = "6月6日测试公告",
+        date = "2026-06-06",
+        summary = "用于验证更早公告加载效果的测试公告。",
+        body = "这是6月6日的测试公告正文。"
+    ),
+    UpdatePreviewNotice(
+        id = "2026-06-05-test",
+        title = "6月5日测试公告",
+        date = "2026-06-05",
+        summary = "用于验证更早公告加载效果的测试公告。",
+        body = "这是6月5日的测试公告正文。"
+    ),
+    UpdatePreviewNotice(
+        id = "2026-06-04-test",
+        title = "6月4日测试公告",
+        date = "2026-06-04",
+        summary = "用于验证更早公告加载效果的测试公告。",
+        body = "这是6月4日的测试公告正文。"
+    ),
+    UpdatePreviewNotice(
+        id = "2026-06-03-test",
+        title = "6月3日测试公告",
+        date = "2026-06-03",
+        summary = "用于验证更早公告加载效果的测试公告。",
+        body = "这是6月3日的测试公告正文。"
+    ),
+    UpdatePreviewNotice(
+        id = "2026-06-02-test",
+        title = "6月2日测试公告",
+        date = "2026-06-02",
+        summary = "用于验证更早公告加载效果的测试公告。",
+        body = "这是6月2日的测试公告正文。"
+    ),
+    UpdatePreviewNotice(
+        id = "2026-06-01-test",
+        title = "6月1日测试公告",
+        date = "2026-06-01",
+        summary = "用于验证更早公告加载效果的测试公告。",
+        body = "这是6月1日的测试公告正文。"
+    )
+)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -395,6 +544,9 @@ fun App() {
     val navigationStack = remember { mutableStateListOf<String>() }
     var forwardNavigation by remember { mutableStateOf(true) }
     var lastBackPressTime by remember { mutableStateOf(0L) }
+    var selectedUpdatePreviewNoticeId by remember {
+        mutableStateOf(updatePreviewNotices.maxByOrNull { it.date }?.id.orEmpty())
+    }
 
     val bgList = listOf(
         R.drawable.zjcs_bg1,
@@ -567,7 +719,8 @@ fun App() {
                 backgroundProgress = backgroundProgress,
                 onDailyRecordClick = { navigateTo("daily_home") },
                 onToolsClick = { navigateTo("tools_home") },
-                onGameDataClick = { navigateTo("game_data_home") }
+                onGameDataClick = { navigateTo("game_data_home") },
+                onUpdatePreviewClick = { navigateTo("update_preview_home") }
             )
 
             "daily_home" -> HomeScreen(
@@ -609,6 +762,25 @@ fun App() {
             "game_data_home" -> GameDataHomeScreen(
                 backgroundRes = currentBg,
                 backgroundProgress = backgroundProgress,
+                onBack = { goBack() }
+            )
+
+            "update_preview_home" -> UpdatePreviewHomeScreen(
+                backgroundRes = currentBg,
+                backgroundProgress = backgroundProgress,
+                onNoticeClick = { noticeId ->
+                    selectedUpdatePreviewNoticeId = noticeId
+                    navigateTo("update_preview_detail")
+                },
+                onBack = { goBack() }
+            )
+
+            "update_preview_detail" -> UpdatePreviewDetailScreen(
+                backgroundRes = currentBg,
+                backgroundProgress = backgroundProgress,
+                notice = updatePreviewNotices
+                    .firstOrNull { it.id == selectedUpdatePreviewNoticeId }
+                    ?: updatePreviewNotices.maxBy { it.date },
                 onBack = { goBack() }
             )
 
@@ -663,7 +835,8 @@ fun MainHomeScreen(
     backgroundProgress: Float,
     onDailyRecordClick: () -> Unit,
     onToolsClick: () -> Unit,
-    onGameDataClick: () -> Unit
+    onGameDataClick: () -> Unit,
+    onUpdatePreviewClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -718,6 +891,14 @@ fun MainHomeScreen(
                 title = "游戏数据",
                 subtitle = "整理和查看游戏相关数据",
                 onClick = onGameDataClick
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            HomeCardButton(
+                title = UPDATE_PREVIEW_CARD_TITLE,
+                subtitle = UPDATE_PREVIEW_CARD_SUBTITLE,
+                onClick = onUpdatePreviewClick
             )
         }
     }
@@ -2898,6 +3079,237 @@ fun GameDataHomeScreen(
         subtitle = "整理和查看游戏相关数据",
         onBack = onBack
     )
+}
+
+@Composable
+fun UpdatePreviewHomeScreen(
+    backgroundRes: Int,
+    backgroundProgress: Float,
+    onNoticeClick: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    val sortedNotices = remember {
+        updatePreviewNotices.sortedByDescending { it.date }
+    }
+    var visibleCount by remember { mutableIntStateOf(10.coerceAtMost(sortedNotices.size)) }
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(scrollState.value, scrollState.maxValue, visibleCount) {
+        if (visibleCount < sortedNotices.size &&
+            scrollState.maxValue > 0 &&
+            scrollState.value >= scrollState.maxValue - 120
+        ) {
+            visibleCount = (visibleCount + 10).coerceAtMost(sortedNotices.size)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clipToBounds()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .safeDrawingPadding()
+                .padding(20.dp)
+        ) {
+            Spacer(modifier = Modifier.height(80.dp))
+
+            StrokeText(
+                text = UPDATE_PREVIEW_CARD_TITLE,
+                fontSize = 40,
+                fillColor = Color.White,
+                strokeColor = Color(0xFF202020),
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            StrokeText(
+                text = "公告列表",
+                fontSize = 24,
+                fillColor = Color.White,
+                strokeColor = Color(0xFF202020)
+            )
+
+            Spacer(modifier = Modifier.height(60.dp))
+
+            sortedNotices.take(visibleCount).forEach { notice ->
+                NoticeListCard(
+                    title = notice.title,
+                    date = notice.date,
+                    summary = notice.summary,
+                    onClick = { onNoticeClick(notice.id) }
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
+            if (visibleCount < sortedNotices.size) {
+                Text(
+                    text = "继续下滑加载更早公告",
+                    fontSize = 14.sp,
+                    color = Color.White,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+
+        TopBackButton(onBack = onBack)
+    }
+}
+
+@Composable
+fun UpdatePreviewDetailScreen(
+    backgroundRes: Int,
+    backgroundProgress: Float,
+    notice: UpdatePreviewNotice,
+    onBack: () -> Unit
+) {
+    SecondaryHomeScreen(
+        backgroundRes = backgroundRes,
+        backgroundProgress = backgroundProgress,
+        title = "更新公告",
+        subtitle = notice.date,
+        onBack = onBack,
+        pinnedTitleBar = true
+    ) {
+        NoticeDetailCard(
+            title = notice.title,
+            date = notice.date,
+            body = notice.body
+        )
+    }
+}
+
+@Composable
+fun NoticeListCard(
+    title: String,
+    date: String,
+    summary: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "公告",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFF3D6DB5))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Text(
+                    text = date,
+                    fontSize = 14.sp,
+                    color = Color(0xFF777777)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = title,
+                fontSize = 22.sp,
+                lineHeight = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF222222)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = summary,
+                fontSize = 16.sp,
+                lineHeight = 22.sp,
+                color = Color(0xFF555555)
+            )
+        }
+    }
+}
+
+@Composable
+fun NoticeDetailCard(
+    title: String,
+    date: String,
+    body: String
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.96f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(22.dp)
+        ) {
+            Text(
+                text = title,
+                fontSize = 26.sp,
+                lineHeight = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF202020)
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "发布时间：$date",
+                fontSize = 14.sp,
+                color = Color(0xFF777777)
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color(0xFFE2E4E8))
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            body.split("\n\n").forEachIndexed { index, paragraph ->
+                Text(
+                    text = paragraph,
+                    fontSize = 17.sp,
+                    lineHeight = 26.sp,
+                    color = Color(0xFF333333)
+                )
+
+                if (index != body.split("\n\n").lastIndex) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+            }
+        }
+    }
 }
 
 @Composable
