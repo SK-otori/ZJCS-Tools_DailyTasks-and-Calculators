@@ -1,8 +1,7 @@
-package com.example.dailytask_zjcs
+package com.otori.zjcstools
 
+import org.junit.Assert.assertEquals
 import org.junit.Test
-
-import org.junit.Assert.*
 import java.time.LocalDate
 import java.time.LocalTime
 

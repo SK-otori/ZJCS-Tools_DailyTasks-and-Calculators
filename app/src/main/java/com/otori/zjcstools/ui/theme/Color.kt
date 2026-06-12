@@ -1,4 +1,4 @@
-package com.example.dailytask_zjcs.ui.theme
+package com.otori.zjcstools.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+apk_chinese_strings.txt
+/.idea/vcs.xml
+/app/release/

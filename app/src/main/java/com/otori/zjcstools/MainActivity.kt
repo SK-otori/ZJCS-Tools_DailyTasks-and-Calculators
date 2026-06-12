@@ -1,4 +1,4 @@
-﻿package com.example.dailytask_zjcs
+﻿package com.otori.zjcstools
 
 import android.app.Activity
 import android.content.Context
@@ -268,7 +268,7 @@ fun loadPersons(context: Context): List<String> {
     val text = prefs.getString("persons", null)
 
     return if (text.isNullOrBlank()) {
-        listOf("源羽", "神明", "彩米", "紫衣", "Alisa", "秋冬", "残阳暮雪", "葡萄D", "小源羽")
+        listOf("示例角色1","示例角色2", "示例角色3", "示例角色4" )
     } else {
         text.split(LIST_SEPARATOR)
     }

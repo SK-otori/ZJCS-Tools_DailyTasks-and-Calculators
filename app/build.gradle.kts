@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.dailytask_zjcs"
+    namespace = "com.otori.zjcstools"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -12,11 +12,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.dailytask_zjcs"
+        applicationId = "com.otori.zjcstools"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "2.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -36,6 +36,10 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+base {
+    archivesName.set("zjcsTools-v${android.defaultConfig.versionName}")
 }
 
 dependencies {
