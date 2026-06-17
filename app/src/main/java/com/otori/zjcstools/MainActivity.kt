@@ -64,12 +64,15 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -105,8 +108,10 @@ import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Locale
+import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
 
 data class TaskItem(
     val name: String,
@@ -121,6 +126,7 @@ private const val RESET_HOUR = 8
 private const val RESET_TYPE_DAILY = "DAILY"
 private const val RESET_TYPE_WEEKLY = "WEEKLY"
 private const val RESET_TYPE_ONCE = "ONCE"
+private const val DEFAULT_DAILY_DATA_VERSION = 2
 
 private const val UPDATE_PREVIEW_CARD_TITLE = "先遣服更新前瞻"
 private const val UPDATE_PREVIEW_CARD_SUBTITLE = "查看先遣服版本更新公告和调整预告"
@@ -131,6 +137,44 @@ data class UpdatePreviewNotice(
     val date: String,
     val summary: String,
     val body: String
+)
+
+private val defaultTasks = listOf(
+    TaskItem("每日副本", RESET_TYPE_DAILY),
+    TaskItem("圣兽讨伐", RESET_TYPE_DAILY),
+    TaskItem("双影幻境", RESET_TYPE_DAILY),
+    TaskItem("每日任务扫尾", RESET_TYPE_DAILY),
+    TaskItem("大矿", RESET_TYPE_WEEKLY, 1),
+    TaskItem("竞技场", RESET_TYPE_WEEKLY, 1),
+    TaskItem("每周轮换活动", RESET_TYPE_WEEKLY, 2)
+)
+
+private val legacyDefaultTasks = listOf(
+    TaskItem("每日副本", RESET_TYPE_DAILY),
+    TaskItem("圣兽讨伐", RESET_TYPE_DAILY),
+    TaskItem("双影幻境", RESET_TYPE_DAILY),
+    TaskItem("秘宝大作战", RESET_TYPE_DAILY),
+    TaskItem("每周轮换活动", RESET_TYPE_WEEKLY, 2),
+    TaskItem("竞技场", RESET_TYPE_WEEKLY, 1)
+)
+
+private val defaultPersons = listOf(
+    "源羽°",
+    "神明丶",
+    "超幸运炫彩米",
+    "紫衣°",
+    "Alisa",
+    "秋冬",
+    "残阳暮雪",
+    "葡萄D",
+    "小源羽"
+)
+
+private val legacyDefaultPersons = listOf(
+    "示例角色1",
+    "示例角色2",
+    "示例角色3",
+    "示例角色4"
 )
 
 private val updatePreviewNotices = listOf(
@@ -304,6 +348,16 @@ fun taskToText(task: TaskItem): String {
     return "${task.name}$TASK_FIELD_SEPARATOR${task.resetType}$TASK_FIELD_SEPARATOR${task.resetDay}"
 }
 
+fun tasksToText(tasks: List<TaskItem>): String {
+    return tasks.joinToString(LIST_SEPARATOR) {
+        taskToText(it)
+    }
+}
+
+fun personsToText(persons: List<String>): String {
+    return persons.joinToString(LIST_SEPARATOR)
+}
+
 fun textToTask(text: String): TaskItem {
     val parts = text.split(TASK_FIELD_SEPARATOR)
 
@@ -370,10 +424,6 @@ fun saveData(
 ) {
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
 
-    val taskText = tasks.joinToString(LIST_SEPARATOR) {
-        taskToText(it)
-    }
-
     val checkedKeys = checkedMap
         .filter { it.value }
         .keys
@@ -385,26 +435,46 @@ fun saveData(
         .joinToString(LIST_SEPARATOR)
 
     prefs.edit(commit = true) {
-        putString("tasks", taskText)
-        putString("persons", persons.joinToString(LIST_SEPARATOR))
+        putString("tasks", tasksToText(tasks))
+        putString("persons", personsToText(persons))
         putString("checked", checkedKeys)
         putString("disabled_roles", disabledRoleKeys)
     }
 }
 
+fun migrateDefaultDailyDataIfNeeded(context: Context) {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+
+    if (prefs.getInt("default_daily_data_version", 0) >= DEFAULT_DAILY_DATA_VERSION) {
+        return
+    }
+
+    val taskText = prefs.getString("tasks", null)
+    val personText = prefs.getString("persons", null)
+    val legacyTaskText = tasksToText(legacyDefaultTasks)
+    val legacyPersonText = personsToText(legacyDefaultPersons)
+
+    prefs.edit(commit = true) {
+        if (taskText.isNullOrBlank() || taskText == legacyTaskText) {
+            putString("tasks", tasksToText(defaultTasks))
+        }
+
+        if (personText.isNullOrBlank() || personText == legacyPersonText) {
+            putString("persons", personsToText(defaultPersons))
+        }
+
+        putInt("default_daily_data_version", DEFAULT_DAILY_DATA_VERSION)
+    }
+}
+
 fun loadTasks(context: Context): List<TaskItem> {
+    migrateDefaultDailyDataIfNeeded(context)
+
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
     val text = prefs.getString("tasks", null)
 
     return if (text.isNullOrBlank()) {
-        listOf(
-            TaskItem("每日副本", "DAILY"),
-            TaskItem("圣兽讨伐", "DAILY"),
-            TaskItem("双影幻境", "DAILY"),
-            TaskItem("秘宝大作战", "DAILY"),
-            TaskItem("每周轮换活动", "WEEKLY", 2),
-            TaskItem("竞技场", "WEEKLY", 1)
-        )
+        defaultTasks
     } else {
         text.split(LIST_SEPARATOR).map {
             textToTask(it)
@@ -413,11 +483,13 @@ fun loadTasks(context: Context): List<TaskItem> {
 }
 
 fun loadPersons(context: Context): List<String> {
+    migrateDefaultDailyDataIfNeeded(context)
+
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
     val text = prefs.getString("persons", null)
 
     return if (text.isNullOrBlank()) {
-        listOf("示例角色1","示例角色2", "示例角色3", "示例角色4" )
+        defaultPersons
     } else {
         text.split(LIST_SEPARATOR)
     }
@@ -543,7 +615,7 @@ fun App() {
     var currentMode by remember { mutableStateOf("home") }
     val navigationStack = remember { mutableStateListOf<String>() }
     var forwardNavigation by remember { mutableStateOf(true) }
-    var lastBackPressTime by remember { mutableStateOf(0L) }
+    var lastBackPressTime by remember { mutableLongStateOf(0L) }
     var selectedUpdatePreviewNoticeId by remember {
         mutableStateOf(updatePreviewNotices.maxByOrNull { it.date }?.id.orEmpty())
     }
@@ -715,8 +787,6 @@ fun App() {
         ) { mode ->
             when (mode) {
             "home" -> MainHomeScreen(
-                backgroundRes = currentBg,
-                backgroundProgress = backgroundProgress,
                 onDailyRecordClick = { navigateTo("daily_home") },
                 onToolsClick = { navigateTo("tools_home") },
                 onGameDataClick = { navigateTo("game_data_home") },
@@ -724,8 +794,6 @@ fun App() {
             )
 
             "daily_home" -> HomeScreen(
-                backgroundRes = currentBg,
-                backgroundProgress = backgroundProgress,
                 onTaskModeClick = { navigateTo("task") },
                 onPersonModeClick = { navigateTo("person") },
                 onManageClick = { navigateTo("manage") },
@@ -733,8 +801,6 @@ fun App() {
             )
 
             "tools_home" -> ToolsHomeScreen(
-                backgroundRes = currentBg,
-                backgroundProgress = backgroundProgress,
                 onDungeonCalculatorClick = { navigateTo("tools_dungeon_morning_star") },
                 onAttributeCalculatorClick = { navigateTo("tools_attribute_morning_star") },
                 onAstralKamiCalculatorClick = { navigateTo("tools_astral_kami") },
@@ -742,32 +808,22 @@ fun App() {
             )
 
             "tools_dungeon_morning_star" -> DungeonMorningStarScreen(
-                backgroundRes = currentBg,
-                backgroundProgress = backgroundProgress,
                 onBack = { goBack() }
             )
 
             "tools_attribute_morning_star" -> AttributeMorningStarScreen(
-                backgroundRes = currentBg,
-                backgroundProgress = backgroundProgress,
                 onBack = { goBack() }
             )
 
             "tools_astral_kami" -> AstralKamiScreen(
-                backgroundRes = currentBg,
-                backgroundProgress = backgroundProgress,
                 onBack = { goBack() }
             )
 
             "game_data_home" -> GameDataHomeScreen(
-                backgroundRes = currentBg,
-                backgroundProgress = backgroundProgress,
                 onBack = { goBack() }
             )
 
             "update_preview_home" -> UpdatePreviewHomeScreen(
-                backgroundRes = currentBg,
-                backgroundProgress = backgroundProgress,
                 onNoticeClick = { noticeId ->
                     selectedUpdatePreviewNoticeId = noticeId
                     navigateTo("update_preview_detail")
@@ -776,8 +832,6 @@ fun App() {
             )
 
             "update_preview_detail" -> UpdatePreviewDetailScreen(
-                backgroundRes = currentBg,
-                backgroundProgress = backgroundProgress,
                 notice = updatePreviewNotices
                     .firstOrNull { it.id == selectedUpdatePreviewNoticeId }
                     ?: updatePreviewNotices.maxBy { it.date },
@@ -831,8 +885,6 @@ fun App() {
 
 @Composable
 fun MainHomeScreen(
-    backgroundRes: Int,
-    backgroundProgress: Float,
     onDailyRecordClick: () -> Unit,
     onToolsClick: () -> Unit,
     onGameDataClick: () -> Unit,
@@ -906,8 +958,6 @@ fun MainHomeScreen(
 
 @Composable
 fun HomeScreen(
-    backgroundRes: Int,
-    backgroundProgress: Float,
     onTaskModeClick: () -> Unit,
     onPersonModeClick: () -> Unit,
     onManageClick: () -> Unit,
@@ -975,16 +1025,12 @@ fun HomeScreen(
 
 @Composable
 fun ToolsHomeScreen(
-    backgroundRes: Int,
-    backgroundProgress: Float,
     onDungeonCalculatorClick: () -> Unit,
     onAttributeCalculatorClick: () -> Unit,
     onAstralKamiCalculatorClick: () -> Unit,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
-        backgroundRes = backgroundRes,
-        backgroundProgress = backgroundProgress,
         title = "小工具",
         subtitle = "放置计算器和实用辅助工具",
         onBack = onBack
@@ -1015,13 +1061,9 @@ fun ToolsHomeScreen(
 
 @Composable
 fun DungeonMorningStarScreen(
-    backgroundRes: Int,
-    backgroundProgress: Float,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
-        backgroundRes = backgroundRes,
-        backgroundProgress = backgroundProgress,
         title = "副本晨星计算器",
         subtitle = "根据原初档位、幸运神像和工资装计算收益",
         onBack = onBack,
@@ -1154,13 +1196,9 @@ data class AstralKamiResult(
 
 @Composable
 fun AstralKamiScreen(
-    backgroundRes: Int,
-    backgroundProgress: Float,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
-        backgroundRes = backgroundRes,
-        backgroundProgress = backgroundProgress,
         title = "星间之神好感度",
         subtitle = "计算星间之神最终等级",
         onBack = onBack,
@@ -1481,9 +1519,8 @@ fun astralKamiMinPreLevel100GiftExpToReach(
         return null
     }
 
-    val unitExp = bluePreExp
-    val maxUnits = (requiredExp + orangePreExp + unitExp - 1) / unitExp
-    val targetUnits = (requiredExp + unitExp - 1) / unitExp
+    val maxUnits = (requiredExp + orangePreExp + bluePreExp - 1) / bluePreExp
+    val targetUnits = (requiredExp + bluePreExp - 1) / bluePreExp
     val possible = BooleanArray(maxUnits + 1)
     possible[0] = true
 
@@ -1498,12 +1535,12 @@ fun astralKamiMinPreLevel100GiftExpToReach(
     }
 
     addGifts(blueGifts, 1)
-    addGifts(purpleGifts, purplePreExp / unitExp)
-    addGifts(orangeGifts, orangePreExp / unitExp)
+    addGifts(purpleGifts, purplePreExp / bluePreExp)
+    addGifts(orangeGifts, orangePreExp / bluePreExp)
 
     for (units in targetUnits..maxUnits) {
         if (possible[units]) {
-            return units * unitExp
+            return units * bluePreExp
         }
     }
 
@@ -1754,19 +1791,18 @@ fun calculateGemPowerRows(characterAttributePower: CharacterAttributePower): Lis
             level <= 10 -> baseUpgradeGemCount
             else -> baseUpgradeGemCount * levelTenMaterialGemCount
         }
-        val consumedLevelFiveGems = upgradeGemCount
         val powerPerLevelFiveGem = if (level == 5) {
             levelFiveGemPower
         } else {
-            val previousLevelPower = levelFiveGemPower * Math.pow(1.5, (level - 6).toDouble())
+            val previousLevelPower = levelFiveGemPower * 1.5.pow((level - 6).toDouble())
             val gainedPower = previousLevelPower * 0.5
-            if (consumedLevelFiveGems > 0.0) gainedPower / consumedLevelFiveGems else 0.0
+            if (upgradeGemCount > 0.0) gainedPower / upgradeGemCount else 0.0
         }
 
         GemPowerRow(
             level = level,
             upgradeGemCount = upgradeGemCount,
-            consumedLevelFiveGems = consumedLevelFiveGems,
+            consumedLevelFiveGems = upgradeGemCount,
             powerPerLevelFiveGem = powerPerLevelFiveGem
         )
     }
@@ -1790,23 +1826,19 @@ fun expectedUpgradeAttempts(successRate: Double, pityFailures: Int): Double {
 
     val failureRate = 1 - successRate
     val expectedSuccessfulAttempts = (1..pityFailures).sumOf { attempt ->
-        attempt * Math.pow(failureRate, (attempt - 1).toDouble()) * successRate
+        attempt * failureRate.pow((attempt - 1).toDouble()) * successRate
     }
     val guaranteedAttempt = pityFailures + 1
 
     return expectedSuccessfulAttempts +
-            guaranteedAttempt * Math.pow(failureRate, pityFailures.toDouble())
+            guaranteedAttempt * failureRate.pow(pityFailures.toDouble())
 }
 
 @Composable
 fun AttributeMorningStarScreen(
-    backgroundRes: Int,
-    backgroundProgress: Float,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
-        backgroundRes = backgroundRes,
-        backgroundProgress = backgroundProgress,
         title = "属性晨星性价比",
         subtitle = "施工中",
         onBack = onBack,
@@ -1988,39 +2020,6 @@ fun AttributeMorningStarCalculator() {
 }
 
 @Composable
-fun CharacterAttributePowerTable(characterAttributePower: CharacterAttributePower) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF7F8FA), RoundedCornerShape(10.dp))
-            .padding(12.dp)
-    ) {
-        Text(
-            text = "角色属性战力",
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF222222)
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(modifier = Modifier.fillMaxWidth()) {
-            TransferBonusCell("攻击", Modifier.weight(1f), header = true)
-            TransferBonusCell("防御", Modifier.weight(1f), header = true)
-            TransferBonusCell("生命", Modifier.weight(1f), header = true)
-            TransferBonusCell("速度", Modifier.weight(1f), header = true)
-        }
-
-        Row(modifier = Modifier.fillMaxWidth()) {
-            TransferBonusCell(formatNumber(characterAttributePower.attack), Modifier.weight(1f))
-            TransferBonusCell(formatNumber(characterAttributePower.defense), Modifier.weight(1f))
-            TransferBonusCell(formatNumber(characterAttributePower.health), Modifier.weight(1f))
-            TransferBonusCell(formatNumber(characterAttributePower.speed), Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
 fun GemPowerResultDialog(
     rows: List<GemPowerRow>,
     onDismiss: () -> Unit
@@ -2162,77 +2161,12 @@ fun WeaponToggleIcon(
 }
 
 @Composable
-fun SoftDropdown(
-    text: String,
-    options: List<String>,
-    enabled: Boolean = true,
-    onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(modifier = modifier) {
-        Button(
-            onClick = { if (enabled && options.isNotEmpty()) expanded = !expanded },
-            enabled = enabled,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (enabled) Color(0xFFEEF1F5) else Color(0xFFE0E0E0),
-                contentColor = Color(0xFF222222),
-                disabledContainerColor = Color(0xFFE0E0E0),
-                disabledContentColor = Color(0xFF555555)
-            )
-        ) {
-            Text(
-                text = text,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        if (expanded) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(8.dp, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.96f))
-            ) {
-                Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                    options.forEach { option ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(36.dp)
-                                .clickable {
-                                    onSelect(option)
-                                    expanded = false
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = option,
-                                fontSize = 15.sp,
-                                textAlign = TextAlign.Center,
-                                color = Color(0xFF333333),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun CircleDropdown(
     text: String,
     options: List<String>,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier
+    onSelect: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -2460,58 +2394,6 @@ fun AttributeDiamondLabel(
             textAlign = TextAlign.Center
         )
     }
-}
-
-@Composable
-fun TransferBonusTable(selectedBonus: JobTransferBonus?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF7F8FA))
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = "职业百分比",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF222222)
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                TransferBonusCell("攻击", Modifier.weight(1f), header = true)
-                TransferBonusCell("防御", Modifier.weight(1f), header = true)
-                TransferBonusCell("生命", Modifier.weight(1f), header = true)
-                TransferBonusCell("速度", Modifier.weight(1f), header = true)
-            }
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                TransferBonusCell(selectedBonus?.attack?.let { formatPercent(it) } ?: "--", Modifier.weight(1f))
-                TransferBonusCell(selectedBonus?.defense?.let { formatPercent(it) } ?: "--", Modifier.weight(1f))
-                TransferBonusCell(selectedBonus?.health?.let { formatPercent(it) } ?: "--", Modifier.weight(1f))
-                TransferBonusCell(selectedBonus?.speed?.let { formatPercent(it) } ?: "--", Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-fun TransferBonusCell(
-    text: String,
-    modifier: Modifier,
-    header: Boolean = false
-) {
-    Text(
-        text = text,
-        fontSize = if (header) 14.sp else 16.sp,
-        fontWeight = if (header) FontWeight.Bold else FontWeight.Normal,
-        color = if (header) Color(0xFF555555) else Color(0xFF222222),
-        textAlign = TextAlign.Center,
-        modifier = modifier
-            .border(1.dp, Color(0xFFE1E3E8))
-            .padding(vertical = 8.dp)
-    )
 }
 
 data class OriginalStarEffectEntry(
@@ -3054,27 +2936,15 @@ fun formatNumber(value: Double): String {
     return String.format(Locale.US, "%.2f", value)
 }
 
-fun formatCompactNumber(value: Double): String {
-    return if (value == value.roundToInt().toDouble()) {
-        value.roundToInt().toString()
-    } else {
-        formatNumber(value)
-    }
-}
-
 fun formatPercent(value: Double): String {
     return String.format(Locale.US, "%.1f%%", value * 100)
 }
 
 @Composable
 fun GameDataHomeScreen(
-    backgroundRes: Int,
-    backgroundProgress: Float,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
-        backgroundRes = backgroundRes,
-        backgroundProgress = backgroundProgress,
         title = "游戏数据",
         subtitle = "整理和查看游戏相关数据",
         onBack = onBack
@@ -3083,8 +2953,6 @@ fun GameDataHomeScreen(
 
 @Composable
 fun UpdatePreviewHomeScreen(
-    backgroundRes: Int,
-    backgroundProgress: Float,
     onNoticeClick: (String) -> Unit,
     onBack: () -> Unit
 ) {
@@ -3094,13 +2962,16 @@ fun UpdatePreviewHomeScreen(
     var visibleCount by remember { mutableIntStateOf(10.coerceAtMost(sortedNotices.size)) }
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(scrollState.value, scrollState.maxValue, visibleCount) {
-        if (visibleCount < sortedNotices.size &&
-            scrollState.maxValue > 0 &&
-            scrollState.value >= scrollState.maxValue - 120
-        ) {
-            visibleCount = (visibleCount + 10).coerceAtMost(sortedNotices.size)
-        }
+    LaunchedEffect(scrollState, visibleCount) {
+        snapshotFlow { scrollState.value to scrollState.maxValue }
+            .collect { (scrollValue, maxValue) ->
+                if (visibleCount < sortedNotices.size &&
+                    maxValue > 0 &&
+                    scrollValue >= maxValue - 120
+                ) {
+                    visibleCount = (visibleCount + 10).coerceAtMost(sortedNotices.size)
+                }
+            }
     }
 
     Box(
@@ -3165,14 +3036,10 @@ fun UpdatePreviewHomeScreen(
 
 @Composable
 fun UpdatePreviewDetailScreen(
-    backgroundRes: Int,
-    backgroundProgress: Float,
     notice: UpdatePreviewNotice,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
-        backgroundRes = backgroundRes,
-        backgroundProgress = backgroundProgress,
         title = "更新公告",
         subtitle = notice.date,
         onBack = onBack,
@@ -3314,8 +3181,6 @@ fun NoticeDetailCard(
 
 @Composable
 fun SecondaryHomeScreen(
-    backgroundRes: Int,
-    backgroundProgress: Float,
     title: String,
     subtitle: String,
     onBack: () -> Unit,
@@ -3714,7 +3579,7 @@ fun ManageScreen(
     var newTaskResetType by remember { mutableStateOf(RESET_TYPE_DAILY) }
     var newTaskResetDay by remember { mutableIntStateOf(1) }
     var isReordering by remember { mutableStateOf(false) }
-    var autoScrollSpeed by remember { mutableStateOf(0f) }
+    var autoScrollSpeed by remember { mutableFloatStateOf(0f) }
     var expandedPersonName by remember { mutableStateOf<String?>(null) }
     var expandedTaskName by remember { mutableStateOf<String?>(null) }
     val manageScrollState = rememberScrollState()
@@ -3727,7 +3592,7 @@ fun ManageScreen(
     LaunchedEffect(isReordering, autoScrollSpeed) {
         while (isReordering && autoScrollSpeed != 0f) {
             manageScrollState.scrollBy(autoScrollSpeed)
-            delay(16)
+            delay(16.milliseconds)
         }
     }
 
@@ -4428,14 +4293,14 @@ fun <T> ReorderableDeleteList(
     expandedContent: @Composable (T) -> Unit = {}
 ) {
     var draggingKey by remember { mutableStateOf<String?>(null) }
-    var dragOffset by remember { mutableStateOf(0f) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
     val moveThreshold = with(LocalDensity.current) { 64.dp.toPx() }
 
-    items.forEachIndexed { index, item ->
+    items.forEach { item ->
         val key = itemKey(item)
 
         key(key) {
-            var handleTopInWindow by remember { mutableStateOf(0f) }
+            var handleTopInWindow by remember { mutableFloatStateOf(0f) }
             val isDragging = draggingKey == key
             val expandable = canExpand(item)
 
@@ -4519,6 +4384,7 @@ fun <T> ReorderableDeleteList(
     }
 }
 
+@Suppress("ModifierParameter")
 @Composable
 fun DeleteRow(
     text: String,
