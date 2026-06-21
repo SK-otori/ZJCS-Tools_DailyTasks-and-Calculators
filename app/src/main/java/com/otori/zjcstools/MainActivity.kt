@@ -1,6 +1,8 @@
 ﻿package com.otori.zjcstools
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.Rect
@@ -137,6 +139,22 @@ data class UpdatePreviewNotice(
     val date: String,
     val summary: String,
     val body: String
+)
+
+data class ExchangeCodeNotice(
+    val code: String,
+    val startDate: LocalDate,
+    val endDate: LocalDate
+)
+
+private const val HIDDEN_EXCHANGE_CODES_KEY = "hidden_exchange_codes"
+
+private val exchangeCodeNotices = listOf(
+    ExchangeCodeNotice(
+        code = "xxx",
+        startDate = LocalDate.of(2026, 6, 1),
+        endDate = LocalDate.of(2026, 12, 31)
+    )
 )
 
 private val defaultTasks = listOf(
@@ -608,6 +626,33 @@ fun resetIfNeeded(
     }
 }
 
+fun activeExchangeCodeNotices(context: Context, today: LocalDate): List<ExchangeCodeNotice> {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    val hiddenCodes = prefs.getStringSet(HIDDEN_EXCHANGE_CODES_KEY, emptySet()).orEmpty()
+
+    return exchangeCodeNotices.filter { notice ->
+        notice.code !in hiddenCodes &&
+                !today.isBefore(notice.startDate) &&
+                !today.isAfter(notice.endDate)
+    }
+}
+
+fun hideExchangeCodeNotices(context: Context, notices: List<ExchangeCodeNotice>) {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    val hiddenCodes = prefs.getStringSet(HIDDEN_EXCHANGE_CODES_KEY, emptySet()).orEmpty().toMutableSet()
+    hiddenCodes.addAll(notices.map { it.code })
+
+    prefs.edit(commit = true) {
+        putStringSet(HIDDEN_EXCHANGE_CODES_KEY, hiddenCodes)
+    }
+}
+
+fun copyExchangeCode(context: Context, code: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("exchange_code", code))
+    Toast.makeText(context, "已复制兑换码", Toast.LENGTH_SHORT).show()
+}
+
 @Composable
 fun App() {
     val context = LocalContext.current
@@ -631,6 +676,9 @@ fun App() {
     )
 
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    var visibleExchangeCodeNotices by remember {
+        mutableStateOf(activeExchangeCodeNotices(context, LocalDate.now()))
+    }
 
     val bgIndex = remember {
         val lastIndex = prefs.getInt("last_bg", -1)
@@ -880,7 +928,79 @@ fun App() {
             )
         }
     }
+
+        if (visibleExchangeCodeNotices.isNotEmpty()) {
+            ExchangeCodeNoticeDialog(
+                notices = visibleExchangeCodeNotices,
+                onCopy = { code ->
+                    copyExchangeCode(context, code)
+                },
+                onNeverRemind = {
+                    hideExchangeCodeNotices(context, visibleExchangeCodeNotices)
+                    visibleExchangeCodeNotices = emptyList()
+                },
+                onDismiss = {
+                    visibleExchangeCodeNotices = emptyList()
+                }
+            )
+        }
 }
+}
+
+@Composable
+fun ExchangeCodeNoticeDialog(
+    notices: List<ExchangeCodeNotice>,
+    onCopy: (String) -> Unit,
+    onNeverRemind: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "兑换码提醒",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                notices.forEach { notice ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "可用兑换码：${notice.code}",
+                            fontSize = 16.sp,
+                            color = Color(0xFF222222),
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        TextButton(onClick = { onCopy(notice.code) }) {
+                            Text("一键复制")
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("我知道了")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onNeverRemind) {
+                Text("不再提醒")
+            }
+        }
+    )
 }
 
 @Composable
@@ -3410,21 +3530,37 @@ fun HomeCardButton(
         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.88f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(modifier = Modifier.padding(22.dp)) {
-            Text(
-                text = title,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF333333)
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.zjcs_icon_star),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(CircleShape)
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
-            Text(
-                text = subtitle,
-                fontSize = 14.sp,
-                color = Color(0xFF666666)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF333333)
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = subtitle,
+                    fontSize = 14.sp,
+                    lineHeight = 19.sp,
+                    color = Color(0xFF666666)
+                )
+            }
         }
     }
 }
