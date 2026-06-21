@@ -145,6 +145,8 @@ private const val REMOTE_EXCHANGE_CODES_URL =
     "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/DHM_codes.json"
 private const val REMOTE_UPDATE_PREVIEW_URL =
     "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/XQF_Announcements.json"
+private const val BUNDLED_EXCHANGE_CODES_FILE = "DHM_codes.json"
+private const val BUNDLED_UPDATE_PREVIEW_FILE = "XQF_Announcements.json"
 
 data class UpdatePreviewNotice(
     val id: String,
@@ -335,7 +337,26 @@ private fun loadCachedExchangeCodeNotices(context: Context): List<ExchangeCodeNo
     return cachedJson
         ?.let(::parseExchangeCodeNotices)
         ?.takeIf { it.isNotEmpty() }
+        ?: loadBundledExchangeCodeNotices(context)
         ?: exchangeCodeNotices
+}
+
+private fun loadBundledExchangeCodeNotices(context: Context): List<ExchangeCodeNotice>? {
+    return readBundledJson(context, BUNDLED_EXCHANGE_CODES_FILE)
+        ?.let(::parseExchangeCodeNotices)
+        ?.takeIf { it.isNotEmpty() }
+}
+
+private fun loadBundledUpdatePreviewNotices(context: Context): List<UpdatePreviewNotice>? {
+    return readBundledJson(context, BUNDLED_UPDATE_PREVIEW_FILE)
+        ?.let(::parseUpdatePreviewNotices)
+        ?.takeIf { it.isNotEmpty() }
+}
+
+private fun readBundledJson(context: Context, fileName: String): String? {
+    return runCatching {
+        context.assets.open(fileName).bufferedReader(Charsets.UTF_8).use { it.readText() }
+    }.getOrNull()
 }
 
 private fun loadCachedUpdatePreviewNotices(context: Context): List<UpdatePreviewNotice> {
@@ -345,6 +366,7 @@ private fun loadCachedUpdatePreviewNotices(context: Context): List<UpdatePreview
     return cachedJson
         ?.let(::parseUpdatePreviewNotices)
         ?.takeIf { it.isNotEmpty() }
+        ?: loadBundledUpdatePreviewNotices(context)
         ?: updatePreviewNotices
 }
 
