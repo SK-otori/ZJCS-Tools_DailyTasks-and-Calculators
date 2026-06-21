@@ -106,7 +106,14 @@ import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.io.IOException
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Locale
@@ -132,6 +139,12 @@ private const val DEFAULT_DAILY_DATA_VERSION = 2
 
 private const val UPDATE_PREVIEW_CARD_TITLE = "先遣服更新前瞻"
 private const val UPDATE_PREVIEW_CARD_SUBTITLE = "查看先遣服版本更新公告和调整预告"
+private const val EXCHANGE_CODE_CARD_TITLE = "兑换码"
+private const val EXCHANGE_CODE_CARD_SUBTITLE = "查看当前可用兑换码和近期过期记录"
+private const val REMOTE_EXCHANGE_CODES_URL =
+    "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/DHM_codes.json"
+private const val REMOTE_UPDATE_PREVIEW_URL =
+    "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/XQF_Announcements.json"
 
 data class UpdatePreviewNotice(
     val id: String,
@@ -147,15 +160,18 @@ data class ExchangeCodeNotice(
     val endDate: LocalDate
 )
 
-private const val HIDDEN_EXCHANGE_CODES_KEY = "hidden_exchange_codes"
+private fun ExchangeCodeNotice.isLongTerm(): Boolean {
+    return endDate.year >= 2099
+}
 
-private val exchangeCodeNotices = listOf(
-    ExchangeCodeNotice(
-        code = "xxx",
-        startDate = LocalDate.of(2026, 6, 1),
-        endDate = LocalDate.of(2026, 12, 31)
-    )
-)
+private const val HIDDEN_EXCHANGE_CODES_KEY = "hidden_exchange_codes"
+private const val MENU_HIDDEN_EXCHANGE_CODES_KEY = "menu_hidden_exchange_codes"
+private const val CACHED_EXCHANGE_CODES_JSON_KEY = "cached_exchange_codes_json"
+private const val CACHED_UPDATE_PREVIEW_JSON_KEY = "cached_update_preview_json"
+
+private class RemoteFileUnavailableException(message: String) : Exception(message)
+
+private val exchangeCodeNotices = emptyList<ExchangeCodeNotice>()
 
 private val defaultTasks = listOf(
     TaskItem("每日副本", RESET_TYPE_DAILY),
@@ -195,143 +211,7 @@ private val legacyDefaultPersons = listOf(
     "示例角色4"
 )
 
-private val updatePreviewNotices = listOf(
-    UpdatePreviewNotice(
-        id = "2026-06-13-maintenance",
-        title = "6月13日停服维护公告",
-        date = "2026-06-13",
-        summary = "6月13日 15:00-17:00 停服维护，新增公会偷菜功能、技能幻彩活动，并调整优化部分技能与玩法体验。",
-        body = """
-由于时空混沌导致坎斯汀世界出现时空乱流，坎斯汀时空管理员将对游戏进行停服维护和调整。
-停服维护期间冒险者将无法登录《杖剑传说》，请各位冒险者届时做好下线准备，以免造成不必要的损失。
-
-【维护时间】
-6月13日 15:00-17:00
-（维护时长将根据实际情况延长或缩短）
-
-【重点更新内容】
-1. 新增公会建筑「交流大厅」，新增公会养殖挂机偷取对应玩法功能
-2. 新增技能幻彩主题活动「神魔争锋」
-3. 战斗技能相关调整及优化
-- 提高「破空斩」百分比与固定值系数10%
-- 提高「真贤庇佑」施加受到伤害降低效果概率：50% -> 100%
-- 调整「灵契秘咒」作用范围：对其1格范围内所有敌方目标 -> 对其身周方形1格范围所有敌方目标
-- 优化「灼炎闪袭」「星炎烬灭」目标选择逻辑，将更优先选择生命百分比最低的敌方目标
-- 优化「灼炎闪袭」自动释放时间现到目标身旁空地的落点判断，使其更稳定地选择可到达的位置
-- 优化增加「天穹凝辉」「蓄能斩」「耀光灵刃」「蓄能光啸」「能量流转」充能层数图标表现
-- 优化部分技能AI释放、移动与索敌逻辑
-- 修复「虚无侵袭」无法触发装备词条「连闪」的问题
-- 修复公会讨伐中「侵魂蚀骨」触发侵蚀效果时，可能出现额外0伤害飘字的问题
-- 修复伙伴阿库娅技能「治疗」无法正确驱散状态的问题
-- 修正部分技能相关文本描述，使其表述更清晰准确：包括「治疗术」「危情守护」「光明剑阵」「回天雨箭」「耀光灵刃」「双耀圣盾」「反打势」「灼炎闪袭」「星炎烬灭」「庇护之誓」「圣约守护」「露水」「生命连接」
-- 修复特定情况下「光耀聚变」的消耗蓄能增伤没有触发生效的原因
-- 修复「百战之锋」满层后的攻击动作特效不变的问题
-- 修复特定情况下在战斗测试模式中未正确触发「撕裂」伤害的问题
-- 修复特定情况下战斗重伤后没有倒地动画的问题
-
-【其他更新内容】
-1. 降低公会挂机工具的租借费用25%
-- 紫色品质工具租借费用：200晨星 -> 150晨星
-- 橙色品质工具租借费用：600晨星 -> 450晨星
-2. 降低伊格尼斯赛季地图「灼焰之径」怪物等级
-3. 降低「梦幻乐园-幻梦共舞」活动玩法评级分数要求
-4. 优化公会「自选3级养殖箱」购买逻辑，将在购买时可选择目标材料直接获得
-5. 优化命运果实探索奇迹和传说品质内容表现效果，以便于更好地区分
-6. 修复人物形象部分初始发型小图标不显示的问题
-7. 修复「嘉年华乐园-躲猫猫」点击地图外围可返回初始区域的问题
-8. 修复伊格尼斯赛季地图「寒霜洞窟十七」木材奖励放怪物群落锁住的问题
-9. 修复特定情况下冰之旅排行榜界面会显示火之旅的排名信息的显示问题
-10. 修复特定情况下讨伐魔物出现无法移动的问题
-11. 修复特定情况下拍卖行会显示一个异常的食谱商品的问题
-12. 调整优化部分UI/UX交互体验
-13. 调整优化部分文本
-14. 修复和优化部分显示问题
-        """.trimIndent()
-    ),
-    UpdatePreviewNotice(
-        id = "2026-06-11-test",
-        title = "6月11日测试公告",
-        date = "2026-06-11",
-        summary = "这是一条用于验证公告列表、详情页和时间倒序排序效果的测试公告。",
-        body = """
-这是6月11日发布的测试公告。
-
-这条公告用于验证新增公告后的排序效果。由于日期早于6月13日，它会显示在6月13日公告下方。
-
-你之后可以把这里替换为真实公告正文。
-        """.trimIndent()
-    ),
-    UpdatePreviewNotice(
-        id = "2026-06-10-test",
-        title = "6月10日测试公告",
-        date = "2026-06-10",
-        summary = "用于验证更早公告加载效果的测试公告。",
-        body = "这是6月10日的测试公告正文。"
-    ),
-    UpdatePreviewNotice(
-        id = "2026-06-09-test",
-        title = "6月9日测试公告",
-        date = "2026-06-09",
-        summary = "用于验证更早公告加载效果的测试公告。",
-        body = "这是6月9日的测试公告正文。"
-    ),
-    UpdatePreviewNotice(
-        id = "2026-06-08-test",
-        title = "6月8日测试公告",
-        date = "2026-06-08",
-        summary = "用于验证更早公告加载效果的测试公告。",
-        body = "这是6月8日的测试公告正文。"
-    ),
-    UpdatePreviewNotice(
-        id = "2026-06-07-test",
-        title = "6月7日测试公告",
-        date = "2026-06-07",
-        summary = "用于验证更早公告加载效果的测试公告。",
-        body = "这是6月7日的测试公告正文。"
-    ),
-    UpdatePreviewNotice(
-        id = "2026-06-06-test",
-        title = "6月6日测试公告",
-        date = "2026-06-06",
-        summary = "用于验证更早公告加载效果的测试公告。",
-        body = "这是6月6日的测试公告正文。"
-    ),
-    UpdatePreviewNotice(
-        id = "2026-06-05-test",
-        title = "6月5日测试公告",
-        date = "2026-06-05",
-        summary = "用于验证更早公告加载效果的测试公告。",
-        body = "这是6月5日的测试公告正文。"
-    ),
-    UpdatePreviewNotice(
-        id = "2026-06-04-test",
-        title = "6月4日测试公告",
-        date = "2026-06-04",
-        summary = "用于验证更早公告加载效果的测试公告。",
-        body = "这是6月4日的测试公告正文。"
-    ),
-    UpdatePreviewNotice(
-        id = "2026-06-03-test",
-        title = "6月3日测试公告",
-        date = "2026-06-03",
-        summary = "用于验证更早公告加载效果的测试公告。",
-        body = "这是6月3日的测试公告正文。"
-    ),
-    UpdatePreviewNotice(
-        id = "2026-06-02-test",
-        title = "6月2日测试公告",
-        date = "2026-06-02",
-        summary = "用于验证更早公告加载效果的测试公告。",
-        body = "这是6月2日的测试公告正文。"
-    ),
-    UpdatePreviewNotice(
-        id = "2026-06-01-test",
-        title = "6月1日测试公告",
-        date = "2026-06-01",
-        summary = "用于验证更早公告加载效果的测试公告。",
-        body = "这是6月1日的测试公告正文。"
-    )
-)
+private val updatePreviewNotices = emptyList<UpdatePreviewNotice>()
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -339,6 +219,189 @@ class MainActivity : ComponentActivity() {
         setContent {
             App()
         }
+    }
+}
+
+private fun JSONObject.firstText(vararg names: String): String? {
+    names.forEach { name ->
+        val value = optString(name).trim()
+        if (value.isNotEmpty()) {
+            return value
+        }
+    }
+
+    return null
+}
+
+private fun parseRemoteDate(text: String?, fallback: LocalDate): LocalDate {
+    return runCatching {
+        LocalDate.parse(text.orEmpty().trim())
+    }.getOrDefault(fallback)
+}
+
+private fun remoteJsonArray(rawJson: String, vararg arrayKeys: String): JSONArray {
+    val trimmed = rawJson.trim()
+
+    if (trimmed.startsWith("[")) {
+        return JSONArray(trimmed)
+    }
+
+    val root = JSONObject(trimmed)
+    arrayKeys.forEach { key ->
+        root.optJSONArray(key)?.let { return it }
+    }
+
+    return JSONArray()
+}
+
+private fun parseExchangeCodeNotices(rawJson: String): List<ExchangeCodeNotice> {
+    return runCatching {
+        val items = remoteJsonArray(rawJson, "codes", "items", "data", "list")
+
+        buildList {
+            for (index in 0 until items.length()) {
+                val item = items.optJSONObject(index) ?: continue
+                val code = item.firstText("code", "exchangeCode", "giftCode", "value") ?: continue
+
+                add(
+                    ExchangeCodeNotice(
+                        code = code,
+                        startDate = parseRemoteDate(
+                            item.firstText("startDate", "start", "beginDate"),
+                            LocalDate.of(1970, 1, 1)
+                        ),
+                        endDate = parseRemoteDate(
+                            item.firstText("endDate", "expireDate", "expiresAt", "end"),
+                            LocalDate.of(2099, 12, 31)
+                        )
+                    )
+                )
+            }
+        }
+    }.getOrDefault(emptyList())
+}
+
+private fun parseUpdatePreviewNotices(rawJson: String): List<UpdatePreviewNotice> {
+    return runCatching {
+        val items = remoteJsonArray(rawJson, "announcements", "notices", "items", "data", "list")
+
+        buildList {
+            for (index in 0 until items.length()) {
+                val item = items.optJSONObject(index) ?: continue
+                val title = item.firstText("title", "name") ?: continue
+                val date = item.firstText("date", "publishDate", "startDate", "time").orEmpty()
+                val body = item.firstText("body", "content", "detail", "details", "text")
+                    ?: item.firstText("summary", "description")
+                    ?: ""
+
+                add(
+                    UpdatePreviewNotice(
+                        id = item.firstText("id")
+                            ?: "${date.ifEmpty { "remote" }}-$index",
+                        title = title,
+                        date = date,
+                        summary = item.firstText("summary", "description")
+                            ?: body.lineSequence().firstOrNull().orEmpty(),
+                        body = body
+                    )
+                )
+            }
+        }
+    }.getOrDefault(emptyList())
+}
+
+private suspend fun downloadText(url: String): String = withContext(Dispatchers.IO) {
+    val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+        connectTimeout = 8000
+        readTimeout = 8000
+        requestMethod = "GET"
+    }
+
+    try {
+        if (connection.responseCode !in 200..299) {
+            throw RemoteFileUnavailableException("HTTP ${connection.responseCode}")
+        }
+
+        connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+    } finally {
+        connection.disconnect()
+    }
+}
+
+private fun loadCachedExchangeCodeNotices(context: Context): List<ExchangeCodeNotice> {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    val cachedJson = prefs.getString(CACHED_EXCHANGE_CODES_JSON_KEY, null)
+
+    return cachedJson
+        ?.let(::parseExchangeCodeNotices)
+        ?.takeIf { it.isNotEmpty() }
+        ?: exchangeCodeNotices
+}
+
+private fun loadCachedUpdatePreviewNotices(context: Context): List<UpdatePreviewNotice> {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    val cachedJson = prefs.getString(CACHED_UPDATE_PREVIEW_JSON_KEY, null)
+
+    return cachedJson
+        ?.let(::parseUpdatePreviewNotices)
+        ?.takeIf { it.isNotEmpty() }
+        ?: updatePreviewNotices
+}
+
+private suspend fun loadRemoteExchangeCodeNotices(context: Context): List<ExchangeCodeNotice> {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+
+    return runCatching {
+        val rawJson = downloadText(REMOTE_EXCHANGE_CODES_URL)
+        val notices = parseExchangeCodeNotices(rawJson)
+        if (notices.isNotEmpty()) {
+            prefs.edit(commit = true) {
+                putString(CACHED_EXCHANGE_CODES_JSON_KEY, rawJson)
+            }
+            notices
+        } else {
+            loadCachedExchangeCodeNotices(context)
+        }
+    }.getOrElse {
+        loadCachedExchangeCodeNotices(context)
+    }
+}
+
+private suspend fun fetchRemoteExchangeCodeNoticesStrict(context: Context): Result<List<ExchangeCodeNotice>> {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+
+    return runCatching {
+        val rawJson = downloadText(REMOTE_EXCHANGE_CODES_URL)
+        val notices = parseExchangeCodeNotices(rawJson)
+
+        if (notices.isEmpty()) {
+            throw RemoteFileUnavailableException("Empty exchange code data")
+        }
+
+        prefs.edit(commit = true) {
+            putString(CACHED_EXCHANGE_CODES_JSON_KEY, rawJson)
+        }
+
+        notices
+    }
+}
+
+private suspend fun loadRemoteUpdatePreviewNotices(context: Context): List<UpdatePreviewNotice> {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+
+    return runCatching {
+        val rawJson = downloadText(REMOTE_UPDATE_PREVIEW_URL)
+        val notices = parseUpdatePreviewNotices(rawJson)
+        if (notices.isNotEmpty()) {
+            prefs.edit(commit = true) {
+                putString(CACHED_UPDATE_PREVIEW_JSON_KEY, rawJson)
+            }
+            notices
+        } else {
+            loadCachedUpdatePreviewNotices(context)
+        }
+    }.getOrElse {
+        loadCachedUpdatePreviewNotices(context)
     }
 }
 
@@ -626,11 +689,15 @@ fun resetIfNeeded(
     }
 }
 
-fun activeExchangeCodeNotices(context: Context, today: LocalDate): List<ExchangeCodeNotice> {
+fun activeExchangeCodeNotices(
+    context: Context,
+    today: LocalDate,
+    notices: List<ExchangeCodeNotice> = exchangeCodeNotices
+): List<ExchangeCodeNotice> {
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
     val hiddenCodes = prefs.getStringSet(HIDDEN_EXCHANGE_CODES_KEY, emptySet()).orEmpty()
 
-    return exchangeCodeNotices.filter { notice ->
+    return notices.filter { notice ->
         notice.code !in hiddenCodes &&
                 !today.isBefore(notice.startDate) &&
                 !today.isAfter(notice.endDate)
@@ -661,8 +728,15 @@ fun App() {
     val navigationStack = remember { mutableStateListOf<String>() }
     var forwardNavigation by remember { mutableStateOf(true) }
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
+    var updatePreviewNoticeList by remember {
+        mutableStateOf(loadCachedUpdatePreviewNotices(context))
+    }
+    var exchangeCodeNoticeList by remember {
+        mutableStateOf(loadCachedExchangeCodeNotices(context))
+    }
+    var exchangeCodeErrorText by remember { mutableStateOf<String?>(null) }
     var selectedUpdatePreviewNoticeId by remember {
-        mutableStateOf(updatePreviewNotices.maxByOrNull { it.date }?.id.orEmpty())
+        mutableStateOf(updatePreviewNoticeList.maxByOrNull { it.date }?.id.orEmpty())
     }
 
     val bgList = listOf(
@@ -677,7 +751,7 @@ fun App() {
 
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
     var visibleExchangeCodeNotices by remember {
-        mutableStateOf(activeExchangeCodeNotices(context, LocalDate.now()))
+        mutableStateOf(activeExchangeCodeNotices(context, LocalDate.now(), exchangeCodeNoticeList))
     }
 
     val bgIndex = remember {
@@ -763,6 +837,39 @@ fun App() {
 
     LaunchedEffect(Unit) {
         refreshResetAndSave()
+
+        updatePreviewNoticeList = loadRemoteUpdatePreviewNotices(context)
+        if (updatePreviewNoticeList.none { it.id == selectedUpdatePreviewNoticeId }) {
+            selectedUpdatePreviewNoticeId = updatePreviewNoticeList.maxByOrNull { it.date }?.id.orEmpty()
+        }
+
+        exchangeCodeNoticeList = loadRemoteExchangeCodeNotices(context)
+        visibleExchangeCodeNotices = activeExchangeCodeNotices(
+            context = context,
+            today = LocalDate.now(),
+            notices = exchangeCodeNoticeList
+        )
+    }
+
+    LaunchedEffect(currentMode) {
+        if (currentMode == "exchange_codes") {
+            exchangeCodeErrorText = null
+
+            fetchRemoteExchangeCodeNoticesStrict(context)
+                .onSuccess { notices ->
+                    exchangeCodeNoticeList = notices
+                }
+                .onFailure { error ->
+                    exchangeCodeErrorText = if (
+                        error is RemoteFileUnavailableException ||
+                        error !is IOException
+                    ) {
+                        "远程文件不可用"
+                    } else {
+                        "网络异常"
+                    }
+                }
+        }
     }
 
     DisposableEffect(lifecycleOwner) {
@@ -838,6 +945,7 @@ fun App() {
                 onDailyRecordClick = { navigateTo("daily_home") },
                 onToolsClick = { navigateTo("tools_home") },
                 onGameDataClick = { navigateTo("game_data_home") },
+                onExchangeCodesClick = { navigateTo("exchange_codes") },
                 onUpdatePreviewClick = { navigateTo("update_preview_home") }
             )
 
@@ -871,7 +979,20 @@ fun App() {
                 onBack = { goBack() }
             )
 
+            "exchange_codes" -> ExchangeCodeScreen(
+                notices = exchangeCodeNoticeList,
+                errorText = exchangeCodeErrorText,
+                onShowLocalData = {
+                    exchangeCodeErrorText = null
+                },
+                onCopy = { code ->
+                    copyExchangeCode(context, code)
+                },
+                onBack = { goBack() }
+            )
+
             "update_preview_home" -> UpdatePreviewHomeScreen(
+                notices = updatePreviewNoticeList,
                 onNoticeClick = { noticeId ->
                     selectedUpdatePreviewNoticeId = noticeId
                     navigateTo("update_preview_detail")
@@ -879,12 +1000,24 @@ fun App() {
                 onBack = { goBack() }
             )
 
-            "update_preview_detail" -> UpdatePreviewDetailScreen(
-                notice = updatePreviewNotices
+            "update_preview_detail" -> {
+                val selectedNotice = updatePreviewNoticeList
                     .firstOrNull { it.id == selectedUpdatePreviewNoticeId }
-                    ?: updatePreviewNotices.maxBy { it.date },
-                onBack = { goBack() }
-            )
+                    ?: updatePreviewNoticeList.maxByOrNull { it.date }
+
+                if (selectedNotice != null) {
+                    UpdatePreviewDetailScreen(
+                        notice = selectedNotice,
+                        onBack = { goBack() }
+                    )
+                } else {
+                    SecondaryHomeScreen(
+                        title = "更新公告",
+                        subtitle = "暂无公告",
+                        onBack = { goBack() }
+                    )
+                }
+            }
 
             "task" -> TaskModeScreen(
                 tasks = tasks,
@@ -954,11 +1087,15 @@ fun ExchangeCodeNoticeDialog(
     onNeverRemind: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    var dialogNotices by remember(notices) {
+        mutableStateOf(notices)
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "兑换码提醒",
+                text = "可用兑换码",
                 fontWeight = FontWeight.Bold
             )
         },
@@ -969,7 +1106,7 @@ fun ExchangeCodeNoticeDialog(
                     .heightIn(max = 320.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                notices.forEach { notice ->
+                dialogNotices.forEach { notice ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -977,16 +1114,33 @@ fun ExchangeCodeNoticeDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "可用兑换码：${notice.code}",
+                            text = notice.code,
                             fontSize = 16.sp,
                             color = Color(0xFF222222),
                             modifier = Modifier.weight(1f)
                         )
 
-                        TextButton(onClick = { onCopy(notice.code) }) {
+                        TextButton(
+                            onClick = {
+                                onCopy(notice.code)
+                                dialogNotices = dialogNotices.filterNot { it.code == notice.code }
+                            }
+                        ) {
                             Text("一键复制")
                         }
                     }
+                }
+
+                if (dialogNotices.isEmpty()) {
+                    Text(
+                        text = "空",
+                        fontSize = 16.sp,
+                        color = Color(0xFF666666),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         },
@@ -1008,6 +1162,7 @@ fun MainHomeScreen(
     onDailyRecordClick: () -> Unit,
     onToolsClick: () -> Unit,
     onGameDataClick: () -> Unit,
+    onExchangeCodesClick: () -> Unit,
     onUpdatePreviewClick: () -> Unit
 ) {
     Box(
@@ -1063,6 +1218,14 @@ fun MainHomeScreen(
                 title = "游戏数据",
                 subtitle = "整理和查看游戏相关数据",
                 onClick = onGameDataClick
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            HomeCardButton(
+                title = EXCHANGE_CODE_CARD_TITLE,
+                subtitle = EXCHANGE_CODE_CARD_SUBTITLE,
+                onClick = onExchangeCodesClick
             )
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -3072,12 +3235,282 @@ fun GameDataHomeScreen(
 }
 
 @Composable
+fun ExchangeCodeScreen(
+    notices: List<ExchangeCodeNotice>,
+    errorText: String?,
+    onShowLocalData: () -> Unit,
+    onCopy: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val today = LocalDate.now()
+    val prefs = remember {
+        context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    }
+    var menuHiddenCodes by remember {
+        mutableStateOf(
+            prefs.getStringSet(MENU_HIDDEN_EXCHANGE_CODES_KEY, emptySet()).orEmpty().toSet()
+        )
+    }
+    var activeExpanded by remember { mutableStateOf(true) }
+    var hiddenExpanded by remember { mutableStateOf(false) }
+    var expiredExpanded by remember { mutableStateOf(false) }
+
+    fun hideFromExchangeCodeMenu(code: String) {
+        val updatedCodes = menuHiddenCodes + code
+        menuHiddenCodes = updatedCodes
+        prefs.edit(commit = true) {
+            putStringSet(MENU_HIDDEN_EXCHANGE_CODES_KEY, updatedCodes)
+        }
+    }
+
+    val activeSortedNotices = remember(notices, today) {
+        notices
+            .filter { notice ->
+                !today.isBefore(notice.startDate) && !today.isAfter(notice.endDate)
+            }
+            .sortedWith(
+                compareBy<ExchangeCodeNotice> { it.isLongTerm() }
+                    .thenByDescending { it.startDate }
+                    .thenByDescending { it.endDate }
+                    .thenBy { it.code }
+            )
+    }
+    val activeNotices = remember(activeSortedNotices, menuHiddenCodes) {
+        activeSortedNotices.filter { it.code !in menuHiddenCodes }
+    }
+    val hiddenActiveNotices = remember(activeSortedNotices, menuHiddenCodes) {
+        activeSortedNotices.filter { it.code in menuHiddenCodes }
+    }
+    val recentExpiredNotices = remember(notices, today) {
+        notices
+            .filter { notice ->
+                notice.endDate.isBefore(today)
+            }
+            .sortedByDescending { it.endDate }
+    }
+
+    SecondaryHomeScreen(
+        title = EXCHANGE_CODE_CARD_TITLE,
+        subtitle = "",
+        onBack = onBack
+    ) {
+        if (errorText != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(360.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.92f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = errorText,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF9A4B4B),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Button(onClick = onShowLocalData) {
+                            Text("显示本地数据")
+                        }
+                    }
+                }
+            }
+
+            return@SecondaryHomeScreen
+        }
+
+        ExchangeCodeSection(
+            title = "当前可用",
+            emptyText = "暂无可用兑换码",
+            notices = activeNotices,
+            expanded = activeExpanded,
+            expired = false,
+            onCopy = onCopy,
+            onToggle = { activeExpanded = !activeExpanded },
+            onHide = { code -> hideFromExchangeCodeMenu(code) }
+        )
+
+        Spacer(modifier = Modifier.height(22.dp))
+
+        ExchangeCodeSection(
+            title = "已隐藏",
+            emptyText = "暂无已隐藏兑换码",
+            notices = hiddenActiveNotices,
+            expanded = hiddenExpanded,
+            expired = false,
+            onCopy = onCopy,
+            onToggle = { hiddenExpanded = !hiddenExpanded }
+        )
+
+        Spacer(modifier = Modifier.height(22.dp))
+
+        ExchangeCodeSection(
+            title = "已过期",
+            emptyText = "暂无已过期兑换码",
+            notices = recentExpiredNotices,
+            expanded = expiredExpanded,
+            expired = true,
+            onCopy = onCopy,
+            onToggle = { expiredExpanded = !expiredExpanded }
+        )
+    }
+}
+
+@Composable
+fun ExchangeCodeSection(
+    title: String,
+    emptyText: String,
+    notices: List<ExchangeCodeNotice>,
+    expanded: Boolean,
+    expired: Boolean,
+    onCopy: (String) -> Unit,
+    onToggle: () -> Unit,
+    onHide: ((String) -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle() },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$title（${notices.size}）",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            modifier = Modifier.weight(1f)
+        )
+
+        Text(
+            text = if (expanded) "收起" else "展开",
+            fontSize = 14.sp,
+            color = Color.White
+        )
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    if (!expanded) {
+        return
+    }
+
+    if (notices.isEmpty()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.92f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        ) {
+            Text(
+                text = emptyText,
+                fontSize = 15.sp,
+                color = Color(0xFF666666),
+                modifier = Modifier.padding(18.dp)
+            )
+        }
+    } else {
+        notices.forEach { notice ->
+            ExchangeCodeListCard(
+                notice = notice,
+                expired = expired,
+                onCopy = onCopy,
+                onHide = onHide
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+fun ExchangeCodeListCard(
+    notice: ExchangeCodeNotice,
+    expired: Boolean,
+    onCopy: (String) -> Unit,
+    onHide: ((String) -> Unit)? = null
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = notice.code,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (expired) Color(0xFF777777) else Color(0xFF222222),
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (!expired) {
+                    TextButton(onClick = { onCopy(notice.code) }) {
+                        Text("一键复制")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (expired) {
+                        "已于 ${notice.endDate} 过期"
+                    } else if (notice.isLongTerm()) {
+                        "可用日期：长期"
+                    } else {
+                        "过期日期：${notice.endDate}"
+                    },
+                    fontSize = 14.sp,
+                    color = if (expired) Color(0xFF9A4B4B) else Color(0xFF4B6F3A),
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (!expired && onHide != null) {
+                    TextButton(onClick = { onHide(notice.code) }) {
+                        Text("不再提醒")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun UpdatePreviewHomeScreen(
+    notices: List<UpdatePreviewNotice>,
     onNoticeClick: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    val sortedNotices = remember {
-        updatePreviewNotices.sortedByDescending { it.date }
+    val sortedNotices = remember(notices) {
+        notices.sortedByDescending { it.date }
     }
     var visibleCount by remember { mutableIntStateOf(10.coerceAtMost(sortedNotices.size)) }
     val scrollState = rememberScrollState()
@@ -3329,14 +3762,16 @@ fun SecondaryHomeScreen(
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            if (subtitle.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            StrokeText(
-                text = subtitle,
-                fontSize = 24,
-                fillColor = Color.White,
-                strokeColor = Color(0xFF202020)
-            )
+                StrokeText(
+                    text = subtitle,
+                    fontSize = 24,
+                    fillColor = Color.White,
+                    strokeColor = Color(0xFF202020)
+                )
+            }
 
             Spacer(modifier = Modifier.height(60.dp))
 
