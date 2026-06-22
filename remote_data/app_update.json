@@ -1,7 +1,7 @@
 {
   "enabled": true,
-  "versionCode": 8,
-  "versionName": "2.3.3-test",
+  "versionCode": 7,
+  "versionName": "2.3.2",
   "apkUrl": "https://gitee.com/evilian/ZJCS-Tools_DailyTasks-and-Calculators/releases/download/v2.3.2/zjcsTools-v2.3.2-release.apk",
   "forceUpdate": false,
   "title": "发现新版本",
