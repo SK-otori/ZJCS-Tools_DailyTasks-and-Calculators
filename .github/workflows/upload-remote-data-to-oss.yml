@@ -16,19 +16,72 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download ossutil
-        run: |
-          curl -L -o ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.19/ossutil64
-          chmod +x ossutil64
-
-      - name: Configure ossutil
-        run: |
-          ./ossutil64 config \
-            -e oss-cn-shanghai.aliyuncs.com \
-            -i "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" \
-            -k "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}"
-
       - name: Upload JSON files
+        env:
+          ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+          ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
         run: |
-          ./ossutil64 cp -f remote_data/DHM_codes.json oss://zjcs-tools-otori-database/DHM_codes.json
-          ./ossutil64 cp -f remote_data/XQF_Announcements.json oss://zjcs-tools-otori-database/XQF_Announcements.json
+          python3 - <<'PY'
+          import base64
+          import email.utils
+          import hashlib
+          import hmac
+          import os
+          import pathlib
+          import sys
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          access_key_id = os.environ["ALIYUN_ACCESS_KEY_ID"]
+          access_key_secret = os.environ["ALIYUN_ACCESS_KEY_SECRET"]
+          bucket = "zjcs-tools-otori-database"
+          endpoint = "oss-cn-shanghai.aliyuncs.com"
+          content_type = "application/json"
+
+          files = [
+              ("remote_data/DHM_codes.json", "DHM_codes.json"),
+              ("remote_data/XQF_Announcements.json", "XQF_Announcements.json"),
+          ]
+
+          def upload(local_path, object_name):
+              data = pathlib.Path(local_path).read_bytes()
+              content_md5 = base64.b64encode(hashlib.md5(data).digest()).decode()
+              date = email.utils.formatdate(usegmt=True)
+              canonical_resource = f"/{bucket}/{object_name}"
+              string_to_sign = f"PUT\n{content_md5}\n{content_type}\n{date}\n{canonical_resource}"
+              signature = base64.b64encode(
+                  hmac.new(
+                      access_key_secret.encode(),
+                      string_to_sign.encode(),
+                      hashlib.sha1,
+                  ).digest()
+              ).decode()
+
+              url = f"https://{bucket}.{endpoint}/{urllib.parse.quote(object_name)}"
+              request = urllib.request.Request(
+                  url,
+                  data=data,
+                  method="PUT",
+                  headers={
+                      "Authorization": f"OSS {access_key_id}:{signature}",
+                      "Content-MD5": content_md5,
+                      "Content-Type": content_type,
+                      "Date": date,
+                  },
+              )
+
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      if response.status // 100 != 2:
+                          raise RuntimeError(f"Unexpected HTTP status {response.status}")
+              except urllib.error.HTTPError as error:
+                  body = error.read().decode("utf-8", errors="replace")
+                  print(body, file=sys.stderr)
+                  raise
+
+              print(f"Uploaded {local_path} -> oss://{bucket}/{object_name}")
+
+          for local_path, object_name in files:
+              upload(local_path, object_name)
+          PY
