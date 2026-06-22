@@ -1,0 +1,34 @@
+name: Upload remote data to OSS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "remote_data/*.json"
+  workflow_dispatch:
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download ossutil
+        run: |
+          curl -L -o ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.19/ossutil64
+          chmod +x ossutil64
+
+      - name: Configure ossutil
+        run: |
+          ./ossutil64 config \
+            -e oss-cn-shanghai.aliyuncs.com \
+            -i "${{ secrets.ALIYUN_ACCESS_KEY_ID }}" \
+            -k "${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}"
+
+      - name: Upload JSON files
+        run: |
+          ./ossutil64 cp -f remote_data/DHM_codes.json oss://zjcs-tools-otori-database/DHM_codes.json
+          ./ossutil64 cp -f remote_data/XQF_Announcements.json oss://zjcs-tools-otori-database/XQF_Announcements.json
