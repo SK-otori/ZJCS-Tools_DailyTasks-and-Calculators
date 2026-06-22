@@ -3,6 +3,15 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+
 android {
     namespace = "com.otori.zjcstools"
     compileSdk {
@@ -15,14 +24,24 @@ android {
         applicationId = "com.otori.zjcstools"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "2.3.0"
+        versionCode = 6
+        versionName = "2.3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = localProperties.getProperty("release.storeFile")?.let { file(it) }
+            storePassword = localProperties.getProperty("release.storePassword")
+            keyAlias = localProperties.getProperty("release.keyAlias")
+            keyPassword = localProperties.getProperty("release.keyPassword")
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             optimization {
                 enable = false
             }
