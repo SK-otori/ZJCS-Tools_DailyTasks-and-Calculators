@@ -770,7 +770,8 @@ fun PinnedToolTitleBar(
             .fillMaxWidth()
             .background(Color(0xFFEDEDED))
             .statusBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 2.dp)
+            .height(56.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
             .zIndex(10f)
     ) {
         Box(
