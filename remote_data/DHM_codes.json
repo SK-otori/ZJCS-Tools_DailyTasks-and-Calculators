@@ -1,5 +1,13 @@
 [
   {
+    "id": "limited-2026-06-22-oss-upload-test",
+    "code": "OSS自动上传测试",
+    "title": "限时兑换码",
+    "description": "用于验证 GitHub Actions 自动上传 OSS。",
+    "startDate": "2026-06-22",
+    "endDate": "2026-06-29"
+  },
+  {
     "id": "limited-2026-06-17-ecommerce-live-relic",
     "code": "电商直播自选奇迹古遗物",
     "title": "限时兑换码",
