@@ -427,6 +427,25 @@ private suspend fun loadRemoteUpdatePreviewNotices(context: Context): List<Updat
     }
 }
 
+private suspend fun fetchRemoteUpdatePreviewNoticesStrict(context: Context): Result<List<UpdatePreviewNotice>> {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+
+    return runCatching {
+        val rawJson = downloadText(REMOTE_UPDATE_PREVIEW_URL)
+        val notices = parseUpdatePreviewNotices(rawJson)
+
+        if (notices.isEmpty()) {
+            throw RemoteFileUnavailableException("Empty update preview data")
+        }
+
+        prefs.edit(commit = true) {
+            putString(CACHED_UPDATE_PREVIEW_JSON_KEY, rawJson)
+        }
+
+        notices
+    }
+}
+
 fun weekDayName(day: Int): String {
     return when (day) {
         1 -> "一"
@@ -756,6 +775,7 @@ fun App() {
     var exchangeCodeNoticeList by remember {
         mutableStateOf(loadCachedExchangeCodeNotices(context))
     }
+    var updatePreviewErrorText by remember { mutableStateOf<String?>(null) }
     var exchangeCodeErrorText by remember { mutableStateOf<String?>(null) }
     var selectedUpdatePreviewNoticeId by remember {
         mutableStateOf(updatePreviewNoticeList.maxByOrNull { it.date }?.id.orEmpty())
@@ -874,23 +894,50 @@ fun App() {
     }
 
     LaunchedEffect(currentMode) {
-        if (currentMode == "exchange_codes") {
-            exchangeCodeErrorText = null
+        when (currentMode) {
+            "exchange_codes" -> {
+                exchangeCodeErrorText = null
 
-            fetchRemoteExchangeCodeNoticesStrict(context)
-                .onSuccess { notices ->
-                    exchangeCodeNoticeList = notices
-                }
-                .onFailure { error ->
-                    exchangeCodeErrorText = if (
-                        error is RemoteFileUnavailableException ||
-                        error !is IOException
-                    ) {
-                        "远程文件不可用"
-                    } else {
-                        "网络异常"
+                fetchRemoteExchangeCodeNoticesStrict(context)
+                    .onSuccess { notices ->
+                        exchangeCodeNoticeList = notices
                     }
-                }
+                    .onFailure { error ->
+                        exchangeCodeErrorText = if (
+                            error is RemoteFileUnavailableException ||
+                            error !is IOException
+                        ) {
+                            "远程文件不可用"
+                        } else {
+                            "网络异常"
+                        }
+                    }
+            }
+
+            "update_preview_home" -> {
+                updatePreviewErrorText = null
+
+                fetchRemoteUpdatePreviewNoticesStrict(context)
+                    .onSuccess { notices ->
+                        updatePreviewNoticeList = notices
+                        if (updatePreviewNoticeList.none { it.id == selectedUpdatePreviewNoticeId }) {
+                            selectedUpdatePreviewNoticeId = updatePreviewNoticeList
+                                .maxByOrNull { it.date }
+                                ?.id
+                                .orEmpty()
+                        }
+                    }
+                    .onFailure { error ->
+                        updatePreviewErrorText = if (
+                            error is RemoteFileUnavailableException ||
+                            error !is IOException
+                        ) {
+                            "远程文件不可用"
+                        } else {
+                            "网络异常"
+                        }
+                    }
+            }
         }
     }
 
@@ -1015,6 +1062,10 @@ fun App() {
 
             "update_preview_home" -> UpdatePreviewHomeScreen(
                 notices = updatePreviewNoticeList,
+                errorText = updatePreviewErrorText,
+                onShowLocalData = {
+                    updatePreviewErrorText = null
+                },
                 onNoticeClick = { noticeId ->
                     selectedUpdatePreviewNoticeId = noticeId
                     navigateTo("update_preview_detail")
@@ -3528,6 +3579,8 @@ fun ExchangeCodeListCard(
 @Composable
 fun UpdatePreviewHomeScreen(
     notices: List<UpdatePreviewNotice>,
+    errorText: String?,
+    onShowLocalData: () -> Unit,
     onNoticeClick: (String) -> Unit,
     onBack: () -> Unit
 ) {
@@ -3582,18 +3635,64 @@ fun UpdatePreviewHomeScreen(
 
             Spacer(modifier = Modifier.height(60.dp))
 
-            sortedNotices.take(visibleCount).forEach { notice ->
-                NoticeListCard(
-                    title = notice.title,
-                    date = notice.date,
-                    summary = notice.summary,
-                    onClick = { onNoticeClick(notice.id) }
-                )
+            if (errorText != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.92f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = errorText,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF9A4B4B),
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Button(onClick = onShowLocalData) {
+                            Text("显示本地数据")
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(14.dp))
+            } else if (sortedNotices.isEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.92f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                ) {
+                    Text(
+                        text = "暂无公告",
+                        fontSize = 15.sp,
+                        color = Color(0xFF666666),
+                        modifier = Modifier.padding(18.dp)
+                    )
+                }
+            } else {
+                sortedNotices.take(visibleCount).forEach { notice ->
+                    NoticeListCard(
+                        title = notice.title,
+                        date = notice.date,
+                        summary = notice.summary,
+                        onClick = { onNoticeClick(notice.id) }
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
             }
 
-            if (visibleCount < sortedNotices.size) {
+            if (errorText == null && visibleCount < sortedNotices.size) {
                 Text(
                     text = "继续下滑加载更早公告",
                     fontSize = 14.sp,
