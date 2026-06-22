@@ -1,12 +1,5 @@
 [
   {
-    "id": "2026-06-22-oss-upload-test",
-    "title": "OSS 自动上传测试公告",
-    "date": "2026-06-22",
-    "summary": "用于验证 GitHub Actions 是否能重新自动上传公告 JSON 到 OSS。",
-    "content": "这是一条测试公告，用于验证 GitHub Actions 自动上传 OSS 与 App 远程公告读取流程。\n\n如果你能在 App 中看到这条公告，说明远程公告 JSON 已成功更新。\n\n重新推送测试：2026-06-22。"
-  },
-  {
     "id": "2026-06-18-maintenance",
     "title": "6月18日停服维护公告",
     "date": "2026-06-18",
