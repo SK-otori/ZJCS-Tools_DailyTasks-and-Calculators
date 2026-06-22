@@ -3,7 +3,7 @@
     "id": "limited-2026-06-22-oss-upload-test",
     "code": "OSS自动上传测试",
     "title": "限时兑换码",
-    "description": "用于验证 GitHub Actions 自动上传 OSS。",
+    "description": "用于验证 GitHub Actions 自动上传 OSS。重新推送测试：2026-06-22。",
     "startDate": "2026-06-22",
     "endDate": "2026-06-29"
   },
