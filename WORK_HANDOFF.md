@@ -1,249 +1,255 @@
-# DailyTask_ZJCS 工作交接单
+# ZJCS-Tools 工作交接报告
 
 生成时间：2026-06-22
 
-## 1. 当前项目状态
+## 1. 当前项目
 
-- 当前项目路径：`E:\Programming\ZJCS-Tools_DailyTasks-and-Calculators\ZJCS-Tools_DailyTasks-and-Calculators`
+- 当前项目路径：`E:\Programming\ZJCS-Tools_DailyTasks-and-Calculators`
 - 项目类型：Android 原生应用，Kotlin + Jetpack Compose + Material 3。
-- 主要业务代码仍集中在 `app\src\main\java\com\otori\zjcstools\MainActivity.kt`。
-- 本机 SDK 配置文件：`local.properties` 用于 Android Studio / Gradle 本机编译，不应提交到 GitHub。
-- 本线程环境里 `git` 命令不可用，未执行 git diff/status/commit/push。
+- 包名 / applicationId：`com.otori.zjcstools`
+- 当前版本：`2.3.2`
+- 当前 `versionCode`：`7`
+- 默认正式包目录：`app\release`
+- 当前正式包：`app\release\zjcsTools-v2.3.2-release.apk`
 
-## 2. 当前版本与构建配置
+## 2. 重要提醒：另一台设备也要配置 local.properties
 
-配置文件：`app\build.gradle.kts`
+`local.properties` 不会提交到 Git，也不应该提交到 Git。换电脑或在另一台设备编译正式包时，需要手动配置。
 
-- `namespace`：`com.otori.zjcstools`
-- `applicationId`：`com.otori.zjcstools`
-- `compileSdk`：`36.1`
-- `minSdk`：`24`
-- `targetSdk`：`36`
-- `versionCode`：`5`
-- `versionName`：`2.3.0`
-- APK 输出名前缀：`zjcsTools-v${versionName}`
-- 当前 debug APK 相对路径：`app\build\outputs\apk\debug\zjcsTools-v2.3.0-debug.apk`
+至少需要包含 Android SDK 路径：
 
-当前 `remote_data` 已通过 Gradle 打包进 APK assets：
-
-```kotlin
-sourceSets {
-    getByName("main") {
-        assets.srcDir("../remote_data")
-    }
-}
+```properties
+sdk.dir=C\:\\Users\\你的用户名\\AppData\\Local\\Android\\Sdk
 ```
 
-构建时会出现 `assets.srcDir` deprecated 警告，但不影响当前编译和打包。后续可以改成新版 Gradle 推荐的目录集合写法。
+如果要生成正式 release 包，还必须配置签名信息：
 
-## 3. 联网权限与远程数据
-
-`app\src\main\AndroidManifest.xml` 已包含：
-
-```xml
-<uses-permission android:name="android.permission.INTERNET" />
+```properties
+release.storeFile=E\:\\AndroidKeyStore\\zjcs_richang.jks
+release.storePassword=你的密码
+release.keyAlias=你的alias
+release.keyPassword=你的密码
 ```
-
-远程 JSON 地址：
-
-- 兑换码：`https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/DHM_codes.json`
-- 公告：`https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/XQF_Announcements.json`
-
-读取方式：
-
-- 使用 `HttpURLConnection` + `org.json`，未引入第三方网络库。
-- App 启动时后台拉取公告和兑换码。
-- 拉取成功后写入 `SharedPreferences("check_data")` 缓存。
-
-缓存 key：
-
-- `cached_exchange_codes_json`
-- `cached_update_preview_json`
-
-## 4. 数据加载链路
-
-当前兑换码和公告的加载优先级：
-
-1. 读取本机缓存 JSON。
-2. 缓存为空或不可解析时，读取 APK 内置 assets 中的 `remote_data` JSON。
-3. 远程请求成功后，更新缓存。
-4. 缓存、assets、远程都不可用时才回退为空列表。
-
-相关内置 assets 文件名：
-
-- `DHM_codes.json`
-- `XQF_Announcements.json`
 
 注意：
 
-- 修改电脑本地 `remote_data` 后，已安装用户不会自动获得新内容。
-- 线上更新仍需要手动上传覆盖 OSS 上的同名 JSON 文件。
-- APK 内置 `remote_data` 只负责首装、离线、远程失败时的兜底。
-- 浏览器打开 JSON 自动下载是正常现象，只要不是 403/404 即可。
+- `\` 和 `:` 在 `.properties` 文件里要转义，例如 `E\:\\AndroidKeyStore\\zjcs_richang.jks`。
+- 签名 `.jks` 文件不要放进仓库，不要上传 GitHub/Gitee。
+- 不要重新生成新的签名 key，否则旧用户无法覆盖安装，只能卸载重装。
 
-## 5. 兑换码系统现状
+## 3. 当前构建配置
 
-一级菜单已有 `兑换码` 入口。
+配置文件：`app\build.gradle.kts`
 
-兑换码页面分三组：
+- `compileSdk`：`36.1`
+- `minSdk`：`24`
+- `targetSdk`：`36`
+- `versionCode`：`7`
+- `versionName`：`2.3.2`
+- APK 输出名前缀：`zjcsTools-v${versionName}`
+- release 签名从 `local.properties` 读取。
 
-- `当前可用`
-  - 默认展开。
-  - 显示当前日期仍在有效期内的兑换码。
-  - 限时兑换码排在长期兑换码上方。
-  - 限时兑换码按开始日期倒序显示。
-  - 长期兑换码到期日使用 `2099-12-31`，App 内显示为 `可用日期：长期`。
+常用命令：
 
-- `已隐藏`
-  - 默认折叠。
-  - 保存用户在兑换码菜单里点击过“不再提醒”的当前未过期兑换码。
-  - 使用本地 key：`menu_hidden_exchange_codes`。
-  - 与启动弹窗的“不再提醒”互相独立。
+```powershell
+.\gradlew.bat testDebugUnitTest --console=plain
+.\gradlew.bat assembleRelease --console=plain
+```
 
-- `已过期`
-  - 默认折叠。
-  - 显示所有已过期兑换码，不限制一个月以内。
+之后约定：
 
-兑换码页面错误状态：
+- 普通功能修改只跑必要测试，不自动生成正式包。
+- 用户明确说“打包 / 升版 / 生成正式包 / 发布包”时，才生成 release APK 并复制到 `app\release`。
 
-- 每次进入兑换码页面都会重新请求远程 `DHM_codes.json`。
-- 网络 IO 错误显示：`网络异常`。
-- OSS 返回 403/404、远程文件不可用、JSON 为空或不可解析显示：`远程文件不可用`。
-- 错误状态下提供 `显示本地数据` 按钮，点击后显示缓存/assets 兜底数据。
-- 下次重新进入兑换码页仍会再次尝试联网。
+## 4. 远程数据与 OSS
 
-启动兑换码弹窗：
-
-- 弹窗只显示兑换码本身，不再显示 `可用兑换码：` 前缀。
-- 每条兑换码点击 `一键复制` 后，会在本次弹窗内临时隐藏。
-- 最后一条复制后，弹窗内显示 `空`，不会自动关闭。
-- 启动弹窗“不再提醒”使用本地 key：`hidden_exchange_codes`。
-- 该记录按兑换码逐条保存，新兑换码不会被旧隐藏记录挡住。
-
-## 6. 当前 remote_data 内容
-
-目录：
+远程数据目录：
 
 - `remote_data\DHM_codes.json`
 - `remote_data\XQF_Announcements.json`
+- `remote_data\app_update.json`
 
-当前兑换码 JSON 共 19 条：
-
-- 限时兑换码 13 条。
-- 长期兑换码 6 条。
-- 长期兑换码到期日统一为 `2099-12-31`。
-
-当前公告 JSON 共 5 条，仍是示例数据：
-
-- `测试公告`
-- `6月20日维护公告示例`
-- `限时活动预告示例`
-- `玩法调整说明示例`
-- `已知问题说明示例`
-
-后续应将公告 JSON 替换为真实公告内容。
-
-## 7. 阿里云 OSS 状态
-
-已创建 Bucket：
+OSS Bucket：
 
 - Bucket：`zjcs-tools-otori-database`
 - 地域：华东2（上海）
 - Endpoint：`oss-cn-shanghai.aliyuncs.com`
 
-当前 App 读取公网地址：
+App 当前读取地址：
 
-- `https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/DHM_codes.json`
-- `https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/XQF_Announcements.json`
+- 兑换码：`https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/DHM_codes.json`
+- 公告：`https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/XQF_Announcements.json`
+- 更新配置：`https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/app_update.json`
 
-更新流程：
+GitHub Actions：
 
-1. 在本地编辑 `remote_data` 对应 JSON。
-2. 确保 JSON 格式合法，日期保持 `yyyy-MM-dd`。
-3. 手动上传覆盖 OSS 同名文件。
-4. App 下次启动或进入相关页面后会读取远程最新内容并写入缓存。
+- 工作流：`.github\workflows\upload-remote-data-to-oss.yml`
+- 推送 `remote_data/*.json` 到 `main` 时会自动上传到 OSS。
+- GitHub Secrets 需要配置：
+  - `ALIYUN_ACCESS_KEY_ID`
+  - `ALIYUN_ACCESS_KEY_SECRET`
 
-## 8. 签名 APK 注意事项
+注意：
 
-正式发布和覆盖升级必须继续使用原来的签名 key。
+- OSS 默认域名不能公开分发 APK，会出现 `ApkDownloadForbidden`。
+- APK 目前使用 Gitee Release 分发，OSS 只放 JSON。
 
-当前已知旧 key 路径示例：
+## 5. 当前版本更新配置
 
-- `E:\AndroidKeyStore\zjcs_richang.jks`
+配置文件：`remote_data\app_update.json`
 
-需要保留并迁移的信息：
+当前配置：
 
-- `.jks` 或 `.keystore` 文件
-- `Key store password`
-- `Key alias`
-- `Key password`
+```json
+{
+  "enabled": true,
+  "versionCode": 7,
+  "versionName": "2.3.2",
+  "apkUrl": "https://gitee.com/evilian/ZJCS-Tools_DailyTasks-and-Calculators/releases/download/v2.3.2/zjcsTools-v2.3.2-release.apk",
+  "forceUpdate": false
+}
+```
 
-不要重新生成新的 key。新 key 会导致已安装旧版本的用户无法直接覆盖升级，只能卸载后重装。
+规则：
+
+- App 启动时读取 `app_update.json`。
+- 远程 `versionCode` 大于本机 `versionCode` 时弹出更新提示。
+- `versionCode` 相等时不会弹，避免用户反复收到同版本更新。
+- `forceUpdate = true` 时隐藏“稍后再说”，当前默认是 `false`。
+
+## 6. Gitee Release 发布
+
+当前 APK 下载不走 OSS，而走 Gitee Release。
+
+当前 2.3.2 应创建：
+
+```text
+标签：v2.3.2
+附件：zjcsTools-v2.3.2-release.apk
+```
+
+附件路径：
+
+```text
+app\release\zjcsTools-v2.3.2-release.apk
+```
+
+下载链接格式：
+
+```text
+https://gitee.com/evilian/ZJCS-Tools_DailyTasks-and-Calculators/releases/download/v2.3.2/zjcsTools-v2.3.2-release.apk
+```
 
 建议：
 
-- key 文件放在项目目录外。
-- 不要提交到 GitHub。
-- 如果忘记 alias，可用 `keytool -list -v -keystore E:\AndroidKeyStore\zjcs_richang.jks` 查看。
+- 如果不想公开源码，可以单独建一个公开 Gitee 仓库只放 Release 附件。
+- 源码仓库可以私有，但 APK 下载仓库必须公开，否则用户手机无法下载。
+- 后续可以用 Gitee Token + GitHub Actions 自动创建 Gitee Release，目前尚未配置。
 
-## 9. GitHub / 新设备交接
+## 7. App 内更新流程
 
-建议使用 GitHub Desktop：
+已实现“App 内下载更新”：
 
-1. 登录 GitHub 账号。
-2. Clone 仓库：`SK-otori/ZJCS-Tools_DailyTasks-and-Calculators`。
-3. 克隆到新的空目录，不要直接覆盖旧项目。
-4. 重点确认以下文件已同步：
-   - `app\src\main\java\com\otori\zjcstools\MainActivity.kt`
-   - `app\src\main\AndroidManifest.xml`
-   - `app\build.gradle.kts`
-   - `remote_data\DHM_codes.json`
-   - `remote_data\XQF_Announcements.json`
-   - `WORK_HANDOFF.md`
-5. 不要提交 `local.properties`。
-6. 不要提交签名 key 文件。
-7. 在 GitHub Desktop 中填写提交说明，`Commit to main`，然后 `Push origin`。
+- 用户点击更新弹窗中的 `下载更新`。
+- App 使用 Android `DownloadManager` 下载 APK。
+- 下载开始后，版本说明和更新内容隐藏，只显示进度条和状态文本。
+- 下载完成后按钮变为 `点击安装`。
+- 下载完成后自动尝试打开系统安装界面。
+- 如果系统要求“允许安装未知应用”，会打开授权页；授权后返回 App 会继续尝试安装。
+- 如果自动打开失败，用户可以点击 `点击安装` 再次进入系统安装器。
 
-## 10. 已知注意事项
+相关文件：
 
-- 当前所有业务和 UI 仍集中在一个很大的 `MainActivity.kt` 中。
-- 后续扩展建议逐步拆分：
-  - `data`
-  - `network`
-  - `screens`
-  - `components`
-  - `calculators`
-- 当前远程 JSON 解析做了字段兼容：
-  - 兑换码优先读 `code`。
-  - 公告优先读 `title`、`date`、`summary`、`body/content`。
-- 兑换码 JSON 日期必须保持 `yyyy-MM-dd`，例如 `2026-06-22`。
-- 如果本地缓存中有旧兑换码隐藏状态，测试启动弹窗时可能需要清理 App 数据。
-- `git` 命令在本 Codex 环境不可用，如需提交建议用 GitHub Desktop 或在本机终端配置 Git。
+- `app\src\main\java\com\otori\zjcstools\AppUpdateInstaller.kt`
+- `app\src\main\java\com\otori\zjcstools\MainActivity.kt`
+- `app\src\main\AndroidManifest.xml`
 
-## 11. 最近一次验证
+Manifest 已增加：
 
-已执行：
+```xml
+<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+```
+
+## 8. 公告与兑换码
+
+公告：
+
+- 文件：`remote_data\XQF_Announcements.json`
+- 当前包含真实公告：
+  - `2026-06-18-maintenance`
+  - `2026-06-12-maintenance`
+  - `2026-05-15-maintenance`
+- 测试公告已删除。
+- App 默认联网获取，失败后可显示本地缓存 / assets 兜底数据。
+
+兑换码：
+
+- 文件：`remote_data\DHM_codes.json`
+- 测试兑换码已删除。
+- App 默认联网获取，失败后可显示本地缓存 / assets 兜底数据。
+
+JSON 上传：
+
+- 修改 `remote_data` 后提交并推送到 `main`。
+- GitHub Actions 会自动同步到 OSS。
+
+## 9. 代码结构现状
+
+原本过长的 `MainActivity.kt` 已拆分出多个文件：
+
+- `MainActivity.kt`：App 入口、导航、首页、共享背景、更新弹窗等。
+- `RemoteNotices.kt`：公告、兑换码、更新配置的模型、解析、缓存、远程下载。
+- `NoticeScreens.kt`：公告和兑换码页面 UI。
+- `CalculatorScreens.kt`：计算器页面和小工具。
+- `DailyTaskData.kt`：每日任务数据、持久化、重置逻辑。
+- `DailyTaskScreens.kt`：每日任务 UI。
+- `AppUpdateInstaller.kt`：应用内下载更新和安装逻辑。
+
+## 10. 小工具与输入体验
+
+已新增小工具：
+
+- `强袭破甲增伤计算器`
+
+功能：
+
+- 输入玩家攻击力、怪物防御力、强袭破甲固定值。
+- 强袭破甲百分比使用品质选择控件，不手输。
+- 品质选项：
+  - `彩-不朽`：`46.1%`
+  - `红-神话`：`39.6%`
+  - `金-奇迹`：`33%`
+  - `橙-传说`：`26.4%`
+- 使用 `qxpj_1_bx.png`、`qxpj_2_sh.png`、`qxpj_3_qj.png`、`qxpj_4_cs.png`。
+
+输入框体验：
+
+- 计算器输入框会保存用户上次输入。
+- 用户点击输入框时默认全选当前文本。
+- 每日任务新增行输入框也支持点击全选。
+
+## 11. 已知注意事项
+
+- `apk_chinese_strings.txt` 已确认无引用，可作为历史遗留文件处理。
+- `.gitignore` 已忽略阿里云 RAM AccessKey 文件夹，AccessKey 不要放入仓库。
+- `assets.srcDir("../remote_data")` 构建时有 deprecated 警告，不影响当前打包，后续可择机改成新版写法。
+- 如果测试更新弹窗，需要确保远程 `app_update.json` 的 `versionCode` 大于当前安装包。
+- 如果用户已经安装同版本，不会弹更新。
+- 如果手机阻止安装未知应用，需要按系统提示授权。
+
+## 12. 最近验证
+
+最近已执行并通过：
 
 ```powershell
-.\gradlew.bat testDebugUnitTest
-.\gradlew.bat assembleDebug
+.\gradlew.bat testDebugUnitTest --console=plain
+.\gradlew.bat assembleRelease --console=plain
 ```
 
-结果：
+当前 release APK：
 
 ```text
-BUILD SUCCESSFUL
+app\release\zjcsTools-v2.3.2-release.apk
 ```
 
-已确认 debug APK 中包含：
-
-```text
-assets/DHM_codes.json
-assets/XQF_Announcements.json
-```
-
-当前 debug APK：
-
-```text
-app\build\outputs\apk\debug\zjcsTools-v2.3.0-debug.apk
-```
+当前 Git 工作区在生成本报告前为干净状态。
