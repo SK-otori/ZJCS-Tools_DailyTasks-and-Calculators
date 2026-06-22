@@ -42,6 +42,7 @@ jobs:
           files = [
               ("remote_data/DHM_codes.json", "DHM_codes.json"),
               ("remote_data/XQF_Announcements.json", "XQF_Announcements.json"),
+              ("remote_data/app_update.json", "app_update.json"),
           ]
 
           def upload(local_path, object_name):

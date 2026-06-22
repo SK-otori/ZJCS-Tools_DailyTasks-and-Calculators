@@ -21,6 +21,8 @@ const val REMOTE_EXCHANGE_CODES_URL =
     "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/DHM_codes.json"
 const val REMOTE_UPDATE_PREVIEW_URL =
     "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/XQF_Announcements.json"
+const val REMOTE_APP_UPDATE_URL =
+    "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/app_update.json"
 const val BUNDLED_EXCHANGE_CODES_FILE = "DHM_codes.json"
 const val BUNDLED_UPDATE_PREVIEW_FILE = "XQF_Announcements.json"
 
@@ -36,6 +38,16 @@ data class ExchangeCodeNotice(
     val code: String,
     val startDate: LocalDate,
     val endDate: LocalDate
+)
+
+data class AppUpdateInfo(
+    val versionCode: Long,
+    val versionName: String,
+    val apkUrl: String,
+    val title: String,
+    val message: String,
+    val releaseNotes: List<String>,
+    val forceUpdate: Boolean
 )
 
 fun ExchangeCodeNotice.isLongTerm(): Boolean {
@@ -141,6 +153,47 @@ fun parseUpdatePreviewNotices(rawJson: String): List<UpdatePreviewNotice> {
     }.getOrDefault(emptyList())
 }
 
+fun parseAppUpdateInfo(rawJson: String): AppUpdateInfo? {
+    return runCatching {
+        val root = JSONObject(rawJson.trim())
+        val enabled = root.optBoolean("enabled", true)
+        val versionCode = root.optLong("versionCode", 0L)
+        val apkUrl = root.firstText("apkUrl", "downloadUrl", "url").orEmpty()
+
+        if (!enabled || versionCode <= 0L || apkUrl.isBlank()) {
+            return@runCatching null
+        }
+
+        val releaseNotes = buildList {
+            val notesArray = root.optJSONArray("releaseNotes")
+            if (notesArray != null) {
+                for (index in 0 until notesArray.length()) {
+                    val note = notesArray.optString(index).trim()
+                    if (note.isNotEmpty()) {
+                        add(note)
+                    }
+                }
+            } else {
+                root.optString("releaseNotes")
+                    .lineSequence()
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .forEach(::add)
+            }
+        }
+
+        AppUpdateInfo(
+            versionCode = versionCode,
+            versionName = root.firstText("versionName", "version").orEmpty(),
+            apkUrl = apkUrl,
+            title = root.firstText("title").orEmpty().ifBlank { "发现新版本" },
+            message = root.firstText("message", "description").orEmpty(),
+            releaseNotes = releaseNotes,
+            forceUpdate = root.optBoolean("forceUpdate", false)
+        )
+    }.getOrNull()
+}
+
 suspend fun downloadText(url: String): String = withContext(Dispatchers.IO) {
     val connection = (URL(url).openConnection() as HttpURLConnection).apply {
         connectTimeout = 8000
@@ -157,6 +210,27 @@ suspend fun downloadText(url: String): String = withContext(Dispatchers.IO) {
     } finally {
         connection.disconnect()
     }
+}
+
+fun currentAppVersionCode(context: Context): Long {
+    val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+
+    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        packageInfo.longVersionCode
+    } else {
+        @Suppress("DEPRECATION")
+        packageInfo.versionCode.toLong()
+    }
+}
+
+suspend fun fetchAppUpdateInfo(context: Context): AppUpdateInfo? {
+    return runCatching {
+        val remoteInfo = downloadText(REMOTE_APP_UPDATE_URL)
+            .let(::parseAppUpdateInfo)
+            ?: return@runCatching null
+
+        remoteInfo.takeIf { it.versionCode > currentAppVersionCode(context) }
+    }.getOrNull()
 }
 
 fun loadCachedExchangeCodeNotices(context: Context): List<ExchangeCodeNotice> {

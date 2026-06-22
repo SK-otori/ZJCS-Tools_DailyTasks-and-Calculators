@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "versionCode": 6,
+  "versionName": "2.3.1",
+  "apkUrl": "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/zjcsTools-v2.3.1-release.apk",
+  "forceUpdate": false,
+  "title": "发现新版本",
+  "message": "检测到杖剑工具有新版本可用。",
+  "releaseNotes": [
+    "新增强袭破甲增伤计算器",
+    "优化输入框记忆与全选体验",
+    "修复并优化部分界面显示"
+  ]
+}

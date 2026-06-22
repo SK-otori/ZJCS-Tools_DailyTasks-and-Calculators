@@ -4,9 +4,11 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Rect
 import android.graphics.RectF
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -151,6 +153,7 @@ fun App() {
     }
     var updatePreviewErrorText by remember { mutableStateOf<String?>(null) }
     var exchangeCodeErrorText by remember { mutableStateOf<String?>(null) }
+    var availableAppUpdate by remember { mutableStateOf<AppUpdateInfo?>(null) }
     var selectedUpdatePreviewNoticeId by remember {
         mutableStateOf(updatePreviewNoticeList.maxByOrNull { it.date }?.id.orEmpty())
     }
@@ -265,6 +268,8 @@ fun App() {
             today = LocalDate.now(),
             notices = exchangeCodeNoticeList
         )
+
+        availableAppUpdate = fetchAppUpdateInfo(context)
     }
 
     LaunchedEffect(currentMode) {
@@ -514,6 +519,29 @@ fun App() {
         }
     }
 
+        availableAppUpdate?.let { updateInfo ->
+            AppUpdateDialog(
+                updateInfo = updateInfo,
+                onUpdate = {
+                    runCatching {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.apkUrl)).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    }.onFailure {
+                        Toast.makeText(context, "无法打开下载链接", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onDismiss = {
+                    if (updateInfo.forceUpdate) {
+                        (context as? Activity)?.finish()
+                    } else {
+                        availableAppUpdate = null
+                    }
+                }
+            )
+        }
+
         if (visibleExchangeCodeNotices.isNotEmpty()) {
             ExchangeCodeNoticeDialog(
                 notices = visibleExchangeCodeNotices,
@@ -530,6 +558,45 @@ fun App() {
             )
         }
 }
+}
+
+
+@Composable
+fun AppUpdateDialog(
+    updateInfo: AppUpdateInfo,
+    onUpdate: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val notesText = updateInfo.releaseNotes.joinToString(separator = "\n") { "• $it" }
+    val messageParts = listOf(
+        "最新版本：${updateInfo.versionName.ifBlank { updateInfo.versionCode.toString() }}",
+        updateInfo.message,
+        notesText
+    ).filter { it.isNotBlank() }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = updateInfo.title)
+        },
+        text = {
+            Text(text = messageParts.joinToString(separator = "\n\n"))
+        },
+        confirmButton = {
+            TextButton(onClick = onUpdate) {
+                Text(text = "立即更新")
+            }
+        },
+        dismissButton = if (updateInfo.forceUpdate) {
+            null
+        } else {
+            {
+                TextButton(onClick = onDismiss) {
+                    Text(text = "稍后再说")
+                }
+            }
+        }
+    )
 }
 
 
