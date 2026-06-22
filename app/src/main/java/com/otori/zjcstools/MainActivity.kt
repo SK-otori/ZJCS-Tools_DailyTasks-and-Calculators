@@ -402,6 +402,7 @@ fun App() {
                 onDungeonCalculatorClick = { navigateTo("tools_dungeon_morning_star") },
                 onAttributeCalculatorClick = { navigateTo("tools_attribute_morning_star") },
                 onAstralKamiCalculatorClick = { navigateTo("tools_astral_kami") },
+                onAssaultArmorBreakCalculatorClick = { navigateTo("tools_assault_armor_break") },
                 onBack = { goBack() }
             )
 
@@ -414,6 +415,10 @@ fun App() {
             )
 
             "tools_astral_kami" -> AstralKamiScreen(
+                onBack = { goBack() }
+            )
+
+            "tools_assault_armor_break" -> AssaultArmorBreakScreen(
                 onBack = { goBack() }
             )
 
@@ -615,6 +620,7 @@ fun ToolsHomeScreen(
     onDungeonCalculatorClick: () -> Unit,
     onAttributeCalculatorClick: () -> Unit,
     onAstralKamiCalculatorClick: () -> Unit,
+    onAssaultArmorBreakCalculatorClick: () -> Unit,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
@@ -642,6 +648,14 @@ fun ToolsHomeScreen(
             title = "星间之神好感度",
             subtitle = "计算星间之神最终等级",
             onClick = onAstralKamiCalculatorClick
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        HomeCardButton(
+            title = "强袭破甲增伤计算器",
+            subtitle = "计算强袭破甲增伤收益",
+            onClick = onAssaultArmorBreakCalculatorClick
         )
     }
 }

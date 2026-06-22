@@ -1,10 +1,12 @@
 ﻿package com.otori.zjcstools
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -47,15 +50,19 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.core.content.edit
 import java.util.Locale
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -193,6 +200,246 @@ data class AstralKamiResult(
     val divineAstrolabe: Int,
     val overflowGiftText: String?
 )
+
+data class AssaultArmorBreakResult(
+    val baseDamageCoefficient: Double,
+    val zeroBuffCoefficient: Double,
+    val zeroBuffDamageIncrease: Double,
+    val threeBuffCoefficient: Double,
+    val threeBuffDamageIncrease: Double
+)
+
+data class AssaultArmorBreakOption(
+    val quality: String,
+    val percentText: String,
+    val percent: Double,
+    val iconRes: Int
+)
+
+private val assaultArmorBreakOptions = listOf(
+    AssaultArmorBreakOption("彩-不朽", "46.1%", 0.461, R.drawable.qxpj_1_bx),
+    AssaultArmorBreakOption("红-神话", "39.6%", 0.396, R.drawable.qxpj_2_sh),
+    AssaultArmorBreakOption("金-奇迹", "33%", 0.33, R.drawable.qxpj_3_qj),
+    AssaultArmorBreakOption("橙-传说", "26.4%", 0.264, R.drawable.qxpj_4_cs)
+)
+
+private const val ASSAULT_ARMOR_BREAK_ATTACK_KEY = "assault_armor_break_attack"
+private const val ASSAULT_ARMOR_BREAK_DEFENSE_KEY = "assault_armor_break_defense"
+private const val ASSAULT_ARMOR_BREAK_FLAT_KEY = "assault_armor_break_flat"
+private const val ASSAULT_ARMOR_BREAK_OPTION_INDEX_KEY = "assault_armor_break_option_index"
+
+@Composable
+fun AssaultArmorBreakScreen(
+    onBack: () -> Unit
+) {
+    SecondaryHomeScreen(
+        title = "强袭破甲增伤计算器",
+        subtitle = "计算强袭破甲增伤收益",
+        onBack = onBack,
+        pinnedTitleBar = true
+    ) {
+        AssaultArmorBreakCalculator()
+    }
+}
+
+@Composable
+fun AssaultArmorBreakCalculator() {
+    val context = LocalContext.current
+    val prefs = remember {
+        context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    }
+    var attackText by remember {
+        mutableStateOf(prefs.getString(ASSAULT_ARMOR_BREAK_ATTACK_KEY, "").orEmpty())
+    }
+    var defenseText by remember {
+        mutableStateOf(prefs.getString(ASSAULT_ARMOR_BREAK_DEFENSE_KEY, "").orEmpty())
+    }
+    var armorBreakFlatText by remember {
+        mutableStateOf(prefs.getString(ASSAULT_ARMOR_BREAK_FLAT_KEY, "").orEmpty())
+    }
+    var armorBreakOptionIndex by remember {
+        mutableIntStateOf(
+            prefs.getInt(ASSAULT_ARMOR_BREAK_OPTION_INDEX_KEY, 0)
+                .coerceIn(assaultArmorBreakOptions.indices)
+        )
+    }
+    val armorBreakOption = assaultArmorBreakOptions[armorBreakOptionIndex]
+    val onArmorBreakOptionClick = {
+        armorBreakOptionIndex = (armorBreakOptionIndex + 1) % assaultArmorBreakOptions.size
+        prefs.edit {
+            putInt(ASSAULT_ARMOR_BREAK_OPTION_INDEX_KEY, armorBreakOptionIndex)
+        }
+    }
+
+    val result = calculateAssaultArmorBreakResult(
+        attack = attackText.toDoubleOrNull(),
+        defense = defenseText.toDoubleOrNull(),
+        armorBreakPercent = armorBreakOption.percent,
+        armorBreakFlat = armorBreakFlatText.toDoubleOrNull()
+    )
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp)
+        ) {
+            CalculatorNumberField("玩家攻击力", attackText, {
+                attackText = it
+                prefs.edit { putString(ASSAULT_ARMOR_BREAK_ATTACK_KEY, it) }
+            })
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            CalculatorNumberField("怪物防御力", defenseText, {
+                defenseText = it
+                prefs.edit { putString(ASSAULT_ARMOR_BREAK_DEFENSE_KEY, it) }
+            })
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            AssaultArmorBreakPercentSelector(
+                option = armorBreakOption,
+                onClick = onArmorBreakOptionClick
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            CalculatorNumberField("强袭破甲固定值", armorBreakFlatText, {
+                armorBreakFlatText = it
+                prefs.edit { putString(ASSAULT_ARMOR_BREAK_FLAT_KEY, it) }
+            })
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = "计算结果",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF222222)
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            ResultLine("基础攻防伤害系数", result?.baseDamageCoefficient?.let(::formatPercent) ?: "--")
+            ResultLine("0层buff攻防系数", result?.zeroBuffCoefficient?.let(::formatPercent) ?: "--")
+            ResultLine("0层buff等效增伤", result?.zeroBuffDamageIncrease?.let(::formatPercent) ?: "--")
+            ResultLine("3层buff攻防系数", result?.threeBuffCoefficient?.let(::formatPercent) ?: "--")
+            ResultLine("3层buff等效增伤", result?.threeBuffDamageIncrease?.let(::formatPercent) ?: "--")
+        }
+    }
+}
+
+@Composable
+fun AssaultArmorBreakPercentSelector(
+    option: AssaultArmorBreakOption,
+    onClick: () -> Unit
+) {
+    Column {
+        Text(
+            text = "强袭破甲百分比",
+            fontSize = 14.sp,
+            color = Color(0xFF555555)
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = painterResource(option.iconRes),
+                contentDescription = option.quality,
+                modifier = Modifier
+                    .size(76.dp)
+                    .clip(CircleShape)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClick
+                    )
+            )
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                AssaultArmorBreakOptionBox(
+                    text = option.quality,
+                    onClick = onClick
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                AssaultArmorBreakOptionBox(
+                    text = option.percentText,
+                    onClick = onClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AssaultArmorBreakOptionBox(
+    text: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(46.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White)
+            .border(1.dp, Color(0xFFB9C0CC), RoundedCornerShape(8.dp))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF222222)
+        )
+    }
+}
+
+fun calculateAssaultArmorBreakResult(
+    attack: Double?,
+    defense: Double?,
+    armorBreakPercent: Double?,
+    armorBreakFlat: Double?
+): AssaultArmorBreakResult? {
+    if (
+        attack == null ||
+        defense == null ||
+        armorBreakPercent == null ||
+        armorBreakFlat == null ||
+        attack <= 0.0 ||
+        defense < 0.0
+    ) {
+        return null
+    }
+
+    val baseDamageCoefficient = attack / (attack + defense)
+    val zeroBuffDefense = maxOf(0.0, defense * (1.0 - armorBreakPercent) - armorBreakFlat)
+    val zeroBuffCoefficient = attack / (attack + zeroBuffDefense)
+    val threeBuffDefense = maxOf(0.0, defense * (1.0 - armorBreakPercent * 1.3) - armorBreakFlat * 1.3)
+    val threeBuffCoefficient = attack / (attack + threeBuffDefense)
+
+    return AssaultArmorBreakResult(
+        baseDamageCoefficient = baseDamageCoefficient,
+        zeroBuffCoefficient = zeroBuffCoefficient,
+        zeroBuffDamageIncrease = zeroBuffCoefficient / baseDamageCoefficient - 1.0,
+        threeBuffCoefficient = threeBuffCoefficient,
+        threeBuffDamageIncrease = threeBuffCoefficient / baseDamageCoefficient - 1.0
+    )
+}
 
 @Composable
 fun AstralKamiScreen(
@@ -1754,15 +2001,46 @@ fun CalculatorNumberField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     placeholderText: String? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    persistenceKey: String = "calculator_input_$label"
 ) {
+    val context = LocalContext.current
+    val prefs = remember {
+        context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    }
     var isFocused by remember { mutableStateOf(false) }
+    var fieldValue by remember {
+        mutableStateOf(TextFieldValue(value, selection = TextRange(value.length)))
+    }
+
+    LaunchedEffect(persistenceKey) {
+        if (enabled && value.isEmpty()) {
+            val savedValue = prefs.getString(persistenceKey, "").orEmpty()
+            if (savedValue.isNotEmpty()) {
+                onValueChange(savedValue)
+            }
+        }
+    }
+
+    LaunchedEffect(value) {
+        if (value != fieldValue.text) {
+            fieldValue = TextFieldValue(value, selection = TextRange(value.length))
+        }
+    }
 
     OutlinedTextField(
-        value = value,
+        value = fieldValue,
         enabled = enabled,
-        onValueChange = { text ->
-            onValueChange(text.filter { it.isDigit() || it == '.' })
+        onValueChange = { newValue ->
+            val filteredText = newValue.text.filter { it.isDigit() || it == '.' }
+            fieldValue = newValue.copy(
+                text = filteredText,
+                selection = TextRange(newValue.selection.end.coerceAtMost(filteredText.length))
+            )
+            onValueChange(filteredText)
+            if (enabled) {
+                prefs.edit { putString(persistenceKey, filteredText) }
+            }
         },
         label = { Text(label) },
         placeholder = if (placeholderText != null && !isFocused) {
@@ -1781,6 +2059,11 @@ fun CalculatorNumberField(
             .fillMaxWidth()
             .onFocusChanged { focusState ->
                 isFocused = focusState.isFocused
+                if (focusState.isFocused) {
+                    fieldValue = fieldValue.copy(
+                        selection = TextRange(0, fieldValue.text.length)
+                    )
+                }
             }
     )
 }
@@ -1934,6 +2217,10 @@ fun ResultLine(
 
 fun formatNumber(value: Double): String {
     return String.format(Locale.US, "%.2f", value)
+}
+
+fun formatCoefficient(value: Double): String {
+    return String.format(Locale.US, "%.6f", value)
 }
 
 fun formatPercent(value: Double): String {
