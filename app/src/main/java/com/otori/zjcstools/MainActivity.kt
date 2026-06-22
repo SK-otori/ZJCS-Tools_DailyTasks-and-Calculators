@@ -1,14 +1,17 @@
 ﻿package com.otori.zjcstools
 
 import android.app.Activity
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.BitmapFactory
 import android.graphics.Rect
 import android.graphics.RectF
-import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -61,6 +64,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -154,6 +158,10 @@ fun App() {
     var updatePreviewErrorText by remember { mutableStateOf<String?>(null) }
     var exchangeCodeErrorText by remember { mutableStateOf<String?>(null) }
     var availableAppUpdate by remember { mutableStateOf<AppUpdateInfo?>(null) }
+    var appUpdateDownloadId by remember { mutableStateOf<Long?>(null) }
+    var downloadedAppUpdateId by remember { mutableStateOf<Long?>(null) }
+    var appUpdateDownloadState by remember { mutableStateOf<AppUpdateDownloadState?>(null) }
+    var appUpdateAwaitingInstallPermission by remember { mutableStateOf(false) }
     var selectedUpdatePreviewNoticeId by remember {
         mutableStateOf(updatePreviewNoticeList.maxByOrNull { it.date }?.id.orEmpty())
     }
@@ -254,6 +262,43 @@ fun App() {
         return true
     }
 
+    fun openDownloadedAppUpdate(downloadId: Long) {
+        when (installDownloadedAppUpdate(context, downloadId)) {
+            AppUpdateInstallResult.Started -> {
+                appUpdateAwaitingInstallPermission = false
+                appUpdateDownloadState = AppUpdateDownloadState(
+                    text = "下载完成，正在打开安装界面",
+                    progress = 1f,
+                    isDownloading = false,
+                    isComplete = true,
+                    isFailed = false
+                )
+            }
+
+            AppUpdateInstallResult.NeedPermission -> {
+                appUpdateAwaitingInstallPermission = true
+                appUpdateDownloadState = AppUpdateDownloadState(
+                    text = "下载完成，请授权后点击安装",
+                    progress = 1f,
+                    isDownloading = false,
+                    isComplete = true,
+                    isFailed = false
+                )
+            }
+
+            AppUpdateInstallResult.Failed -> {
+                appUpdateAwaitingInstallPermission = false
+                appUpdateDownloadState = AppUpdateDownloadState(
+                    text = "下载完成，但无法打开安装界面",
+                    progress = 1f,
+                    isDownloading = false,
+                    isComplete = true,
+                    isFailed = false
+                )
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         refreshResetAndSave()
 
@@ -270,6 +315,70 @@ fun App() {
         )
 
         availableAppUpdate = fetchAppUpdateInfo(context)
+    }
+
+    LaunchedEffect(appUpdateDownloadId) {
+        val downloadId = appUpdateDownloadId ?: return@LaunchedEffect
+
+        while (true) {
+            val state = queryAppUpdateDownloadState(context, downloadId)
+            appUpdateDownloadState = state
+
+            if (state.isComplete) {
+                downloadedAppUpdateId = downloadId
+                appUpdateDownloadId = null
+                openDownloadedAppUpdate(downloadId)
+                return@LaunchedEffect
+            }
+
+            if (state.isFailed) {
+                downloadedAppUpdateId = null
+                appUpdateDownloadId = null
+                return@LaunchedEffect
+            }
+
+            delay(700L)
+        }
+    }
+
+    DisposableEffect(appUpdateDownloadId) {
+        val downloadId = appUpdateDownloadId
+
+        if (downloadId == null) {
+            onDispose { }
+        } else {
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(receiverContext: Context, intent: Intent) {
+                    val completedId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
+                    if (completedId != downloadId) {
+                        return
+                    }
+
+                    val state = queryAppUpdateDownloadState(context, downloadId)
+                    appUpdateDownloadState = state
+                    appUpdateDownloadId = null
+
+                    if (state.isComplete) {
+                        downloadedAppUpdateId = downloadId
+                        openDownloadedAppUpdate(downloadId)
+                    } else if (state.isFailed) {
+                        downloadedAppUpdateId = null
+                    }
+                }
+            }
+            val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                context.registerReceiver(receiver, filter)
+            }
+
+            onDispose {
+                context.unregisterReceiver(receiver)
+            }
+        }
     }
 
     LaunchedEffect(currentMode) {
@@ -323,7 +432,18 @@ fun App() {
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> refreshResetAndSave()
+                Lifecycle.Event.ON_RESUME -> {
+                    refreshResetAndSave()
+
+                    downloadedAppUpdateId?.let { downloadId ->
+                        if (appUpdateAwaitingInstallPermission &&
+                            canRequestAppPackageInstalls(context)
+                        ) {
+                            openDownloadedAppUpdate(downloadId)
+                        }
+                    }
+                }
+
                 Lifecycle.Event.ON_PAUSE,
                 Lifecycle.Event.ON_STOP -> saveNow()
                 else -> Unit
@@ -522,14 +642,31 @@ fun App() {
         availableAppUpdate?.let { updateInfo ->
             AppUpdateDialog(
                 updateInfo = updateInfo,
+                downloadState = appUpdateDownloadState,
+                hasDownloadedApk = downloadedAppUpdateId != null,
                 onUpdate = {
+                    if (appUpdateDownloadId != null) {
+                        Toast.makeText(context, "安装包正在下载", Toast.LENGTH_SHORT).show()
+                        return@AppUpdateDialog
+                    }
+
+                    downloadedAppUpdateId?.let { downloadId ->
+                        openDownloadedAppUpdate(downloadId)
+                        return@AppUpdateDialog
+                    }
+
                     runCatching {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.apkUrl)).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(intent)
+                        appUpdateDownloadId = enqueueAppUpdateDownload(context, updateInfo)
+                        downloadedAppUpdateId = null
+                        appUpdateDownloadState = AppUpdateDownloadState(
+                            text = "等待下载开始",
+                            progress = 0f,
+                            isDownloading = true,
+                            isComplete = false,
+                            isFailed = false
+                        )
                     }.onFailure {
-                        Toast.makeText(context, "无法打开下载链接", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "无法开始下载", Toast.LENGTH_SHORT).show()
                     }
                 },
                 onDismiss = {
@@ -564,6 +701,8 @@ fun App() {
 @Composable
 fun AppUpdateDialog(
     updateInfo: AppUpdateInfo,
+    downloadState: AppUpdateDownloadState?,
+    hasDownloadedApk: Boolean,
     onUpdate: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -572,7 +711,7 @@ fun AppUpdateDialog(
         "最新版本：${updateInfo.versionName.ifBlank { updateInfo.versionCode.toString() }}",
         updateInfo.message,
         notesText
-    ).filter { it.isNotBlank() }
+    ).filterNotNull().filter { it.isNotBlank() }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -580,11 +719,47 @@ fun AppUpdateDialog(
             Text(text = updateInfo.title)
         },
         text = {
-            Text(text = messageParts.joinToString(separator = "\n\n"))
+            Column {
+                if (downloadState == null) {
+                    Text(text = messageParts.joinToString(separator = "\n\n"))
+                } else {
+                    val progress = downloadState.progress
+                    if (progress != null) {
+                        LinearProgressIndicator(
+                            progress = { progress },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = downloadState.text,
+                        fontSize = 13.sp,
+                        color = Color(0xFF5A4D75)
+                    )
+                }
+            }
         },
         confirmButton = {
-            TextButton(onClick = onUpdate) {
-                Text(text = "立即更新")
+            val isDownloading = downloadState?.isDownloading == true
+            val canInstall = hasDownloadedApk || downloadState?.isComplete == true
+
+            TextButton(
+                onClick = onUpdate,
+                enabled = !isDownloading
+            ) {
+                Text(
+                    text = when {
+                        isDownloading -> "下载中"
+                        canInstall -> "点击安装"
+                        else -> "下载更新"
+                    }
+                )
             }
         },
         dismissButton = if (updateInfo.forceUpdate) {
@@ -633,7 +808,7 @@ fun MainHomeScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             StrokeText(
-                text = "制作者：陨落峡谷-音璃",
+                text = "开发者：陨落峡谷-音璃",
                 fontSize = 24,
                 fillColor = Color.White,
                 strokeColor = Color(0xFF202020)

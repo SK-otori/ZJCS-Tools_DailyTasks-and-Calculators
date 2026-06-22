@@ -1,14 +1,14 @@
 {
   "enabled": true,
   "versionCode": 7,
-  "versionName": "2.3.2-test",
-  "apkUrl": "https://gitee.com/evilian/ZJCS-Tools_DailyTasks-and-Calculators/releases/download/v2.3.1/zjcsTools-v2.3.1-release.apk",
+  "versionName": "2.3.2",
+  "apkUrl": "https://gitee.com/evilian/ZJCS-Tools_DailyTasks-and-Calculators/releases/download/v2.3.2/zjcsTools-v2.3.2-release.apk",
   "forceUpdate": false,
   "title": "发现新版本",
   "message": "检测到杖剑工具有新版本可用。",
   "releaseNotes": [
-    "新增强袭破甲增伤计算器",
-    "优化输入框记忆与全选体验",
-    "修复并优化部分界面显示"
+    "新增应用内下载更新流程",
+    "优化更新下载进度条与安装按钮显示",
+    "修复部分机型下载完成后未切换安装入口的问题"
   ]
 }
