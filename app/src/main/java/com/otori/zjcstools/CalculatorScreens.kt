@@ -228,6 +228,74 @@ private const val ASSAULT_ARMOR_BREAK_DEFENSE_KEY = "assault_armor_break_defense
 private const val ASSAULT_ARMOR_BREAK_FLAT_KEY = "assault_armor_break_flat"
 private const val ASSAULT_ARMOR_BREAK_OPTION_INDEX_KEY = "assault_armor_break_option_index"
 
+data class CommissionDungeonNode(
+    val id: String,
+    val label: String,
+    val x: Float,
+    val y: Float,
+    val monsters: List<String> = emptyList()
+)
+
+data class CommissionDungeonMap(
+    val name: String,
+    val nodes: List<CommissionDungeonNode>,
+    val routes: List<Pair<String, String>>
+)
+
+private val commissionDungeonMaps = listOf(
+    CommissionDungeonMap(
+        name = "雾隐林地",
+        nodes = listOf(
+            CommissionDungeonNode("start", "入口", 0.12f, 0.55f),
+            CommissionDungeonNode("camp", "林间营地", 0.32f, 0.28f, listOf("巡林小妖")),
+            CommissionDungeonNode("pond", "浅水潭", 0.52f, 0.55f, listOf("湿地软泥")),
+            CommissionDungeonNode("ruin", "古木遗迹", 0.72f, 0.28f, listOf("树精守卫")),
+            CommissionDungeonNode("boss", "深林尽头", 0.88f, 0.58f, listOf("雾隐狼王"))
+        ),
+        routes = listOf(
+            "start" to "camp",
+            "start" to "pond",
+            "camp" to "ruin",
+            "pond" to "ruin",
+            "ruin" to "boss"
+        )
+    ),
+    CommissionDungeonMap(
+        name = "灼焰矿洞",
+        nodes = listOf(
+            CommissionDungeonNode("start", "矿洞入口", 0.10f, 0.70f),
+            CommissionDungeonNode("fork", "热风岔路", 0.30f, 0.48f, listOf("熔火蝙蝠")),
+            CommissionDungeonNode("upper", "上层矿道", 0.50f, 0.24f, listOf("赤岩魔像")),
+            CommissionDungeonNode("lower", "熔岩栈桥", 0.55f, 0.72f, listOf("火蜥蜴")),
+            CommissionDungeonNode("core", "矿洞核心", 0.82f, 0.50f, listOf("灼焰领主"))
+        ),
+        routes = listOf(
+            "start" to "fork",
+            "fork" to "upper",
+            "fork" to "lower",
+            "upper" to "core",
+            "lower" to "core"
+        )
+    ),
+    CommissionDungeonMap(
+        name = "寒霜古堡",
+        nodes = listOf(
+            CommissionDungeonNode("gate", "城堡大门", 0.12f, 0.50f),
+            CommissionDungeonNode("hall", "冰封大厅", 0.34f, 0.50f, listOf("寒霜侍从")),
+            CommissionDungeonNode("tower", "钟楼", 0.52f, 0.22f, listOf("冰羽游魂")),
+            CommissionDungeonNode("prison", "地牢", 0.56f, 0.76f, listOf("雪盔守卫")),
+            CommissionDungeonNode("throne", "王座厅", 0.86f, 0.50f, listOf("霜冠骑士"))
+        ),
+        routes = listOf(
+            "gate" to "hall",
+            "hall" to "tower",
+            "hall" to "prison",
+            "tower" to "throne",
+            "prison" to "throne"
+        )
+    )
+)
+
 @Composable
 fun AssaultArmorBreakScreen(
     onBack: () -> Unit
@@ -239,6 +307,181 @@ fun AssaultArmorBreakScreen(
         pinnedTitleBar = true
     ) {
         AssaultArmorBreakCalculator()
+    }
+}
+
+@Composable
+fun CommissionMonsterLookupScreen(
+    onBack: () -> Unit
+) {
+    SecondaryHomeScreen(
+        title = "委托怪物查询",
+        subtitle = "副本地图",
+        onBack = onBack,
+        pinnedTitleBar = true
+    ) {
+        CommissionMonsterLookupTool()
+    }
+}
+
+@Composable
+fun CommissionMonsterLookupTool() {
+    var selectedIndex by remember { mutableIntStateOf(0) }
+    var expanded by remember { mutableStateOf(false) }
+    val selectedMap = commissionDungeonMaps[selectedIndex.coerceIn(0, commissionDungeonMaps.lastIndex)]
+
+    Column {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.92f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
+            ) {
+                Text(
+                    text = "副本",
+                    fontSize = 14.sp,
+                    color = Color(0xFF555555)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Box {
+                    Button(
+                        onClick = { expanded = !expanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(selectedMap.name)
+                    }
+
+                    FloatingOptionMenu(
+                        expanded = expanded,
+                        options = commissionDungeonMaps.map { it.name },
+                        width = 220.dp,
+                        onDismiss = { expanded = false },
+                        onSelect = { name ->
+                            selectedIndex = commissionDungeonMaps.indexOfFirst { it.name == name }
+                                .takeIf { it >= 0 }
+                                ?: selectedIndex
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        CommissionDungeonMapCard(selectedMap)
+    }
+}
+
+@Composable
+fun CommissionDungeonMapCard(
+    dungeonMap: CommissionDungeonMap
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp)
+        ) {
+            Text(
+                text = dungeonMap.name,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF222222)
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            CommissionDungeonRouteCanvas(dungeonMap)
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            dungeonMap.nodes.forEach { node ->
+                val monsterText = if (node.monsters.isEmpty()) {
+                    "无记录"
+                } else {
+                    node.monsters.joinToString("、")
+                }
+                ResultLine(node.label, monsterText)
+            }
+        }
+    }
+}
+
+@Composable
+fun CommissionDungeonRouteCanvas(
+    dungeonMap: CommissionDungeonMap
+) {
+    val nodeMap = remember(dungeonMap) {
+        dungeonMap.nodes.associateBy { it.id }
+    }
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFFF7F3EC))
+            .padding(10.dp)
+    ) {
+        val horizontalPadding = 28f
+        val verticalPadding = 26f
+        val routeColor = Color(0xFF8F7A52)
+        val emptyNodeColor = Color(0xFFE5DDD0)
+        val monsterNodeColor = Color(0xFF6D4BB8)
+        val startNodeColor = Color(0xFF4C8C57)
+
+        fun pointOf(node: CommissionDungeonNode): Offset {
+            return Offset(
+                x = horizontalPadding + node.x * (size.width - horizontalPadding * 2f),
+                y = verticalPadding + node.y * (size.height - verticalPadding * 2f)
+            )
+        }
+
+        dungeonMap.routes.forEach { (fromId, toId) ->
+            val from = nodeMap[fromId] ?: return@forEach
+            val to = nodeMap[toId] ?: return@forEach
+            drawLine(
+                color = routeColor,
+                start = pointOf(from),
+                end = pointOf(to),
+                strokeWidth = 7f,
+                cap = StrokeCap.Round
+            )
+        }
+
+        dungeonMap.nodes.forEachIndexed { index, node ->
+            val center = pointOf(node)
+            val hasMonster = node.monsters.isNotEmpty()
+            val nodeColor = when {
+                index == 0 -> startNodeColor
+                hasMonster -> monsterNodeColor
+                else -> emptyNodeColor
+            }
+
+            drawCircle(
+                color = Color.White,
+                radius = 20f,
+                center = center
+            )
+            drawCircle(
+                color = nodeColor,
+                radius = 14f,
+                center = center
+            )
+        }
     }
 }
 

@@ -550,8 +550,7 @@ fun App() {
                 onDailyRecordClick = { navigateTo("daily_home") },
                 onToolsClick = { navigateTo("tools_home") },
                 onGameDataClick = { navigateTo("game_data_home") },
-                onExchangeCodesClick = { navigateTo("exchange_codes") },
-                onGameNoticeClick = { navigateTo("game_notice_home") }
+                onGameInfoClick = { navigateTo("game_info_home") }
             )
 
             "daily_home" -> HomeScreen(
@@ -566,6 +565,7 @@ fun App() {
                 onAttributeCalculatorClick = { navigateTo("tools_attribute_morning_star") },
                 onAstralKamiCalculatorClick = { navigateTo("tools_astral_kami") },
                 onAssaultArmorBreakCalculatorClick = { navigateTo("tools_assault_armor_break") },
+                onCommissionMonsterLookupClick = { navigateTo("tools_commission_monster_lookup") },
                 onBack = { goBack() }
             )
 
@@ -585,11 +585,16 @@ fun App() {
                 onBack = { goBack() }
             )
 
+            "tools_commission_monster_lookup" -> CommissionMonsterLookupScreen(
+                onBack = { goBack() }
+            )
+
             "game_data_home" -> GameDataHomeScreen(
                 onBack = { goBack() }
             )
 
-            "game_notice_home" -> GameNoticeHomeScreen(
+            "game_info_home" -> GameInfoHomeScreen(
+                onExchangeCodesClick = { navigateTo("exchange_codes") },
                 onOfficialNoticeClick = { navigateTo("official_notice_home") },
                 onUpdatePreviewClick = { navigateTo("update_preview_home") },
                 onBack = { goBack() }
@@ -861,8 +866,7 @@ fun MainHomeScreen(
     onDailyRecordClick: () -> Unit,
     onToolsClick: () -> Unit,
     onGameDataClick: () -> Unit,
-    onExchangeCodesClick: () -> Unit,
-    onGameNoticeClick: () -> Unit
+    onGameInfoClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -922,17 +926,9 @@ fun MainHomeScreen(
             Spacer(modifier = Modifier.height(18.dp))
 
             HomeCardButton(
-                title = EXCHANGE_CODE_CARD_TITLE,
-                subtitle = EXCHANGE_CODE_CARD_SUBTITLE,
-                onClick = onExchangeCodesClick
-            )
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            HomeCardButton(
-                title = GAME_NOTICE_CARD_TITLE,
-                subtitle = GAME_NOTICE_CARD_SUBTITLE,
-                onClick = onGameNoticeClick
+                title = GAME_INFO_CARD_TITLE,
+                subtitle = GAME_INFO_CARD_SUBTITLE,
+                onClick = onGameInfoClick
             )
         }
     }
@@ -945,6 +941,7 @@ fun ToolsHomeScreen(
     onAttributeCalculatorClick: () -> Unit,
     onAstralKamiCalculatorClick: () -> Unit,
     onAssaultArmorBreakCalculatorClick: () -> Unit,
+    onCommissionMonsterLookupClick: () -> Unit,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
@@ -981,6 +978,14 @@ fun ToolsHomeScreen(
             subtitle = "计算强袭破甲增伤收益",
             onClick = onAssaultArmorBreakCalculatorClick
         )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        HomeCardButton(
+            title = "委托怪物查询",
+            subtitle = "查询委托怪物所在副本地图",
+            onClick = onCommissionMonsterLookupClick
+        )
     }
 }
 
@@ -998,16 +1003,25 @@ fun GameDataHomeScreen(
 
 
 @Composable
-fun GameNoticeHomeScreen(
+fun GameInfoHomeScreen(
+    onExchangeCodesClick: () -> Unit,
     onOfficialNoticeClick: () -> Unit,
     onUpdatePreviewClick: () -> Unit,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
-        title = GAME_NOTICE_CARD_TITLE,
-        subtitle = GAME_NOTICE_CARD_SUBTITLE,
+        title = GAME_INFO_CARD_TITLE,
+        subtitle = GAME_INFO_CARD_SUBTITLE,
         onBack = onBack
     ) {
+        HomeCardButton(
+            title = EXCHANGE_CODE_CARD_TITLE,
+            subtitle = EXCHANGE_CODE_CARD_SUBTITLE,
+            onClick = onExchangeCodesClick
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
         HomeCardButton(
             title = OFFICIAL_NOTICE_CARD_TITLE,
             subtitle = OFFICIAL_NOTICE_CARD_SUBTITLE,

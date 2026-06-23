@@ -13,8 +13,8 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDate
-const val GAME_NOTICE_CARD_TITLE = "游戏公告"
-const val GAME_NOTICE_CARD_SUBTITLE = "查看正式服和先遣服更新公告"
+const val GAME_INFO_CARD_TITLE = "游戏信息"
+const val GAME_INFO_CARD_SUBTITLE = "兑换码和游戏公告"
 const val OFFICIAL_NOTICE_CARD_TITLE = "正式服公告"
 const val OFFICIAL_NOTICE_CARD_SUBTITLE = "查看正式服版本更新公告"
 const val UPDATE_PREVIEW_CARD_TITLE = "先遣服公告"
