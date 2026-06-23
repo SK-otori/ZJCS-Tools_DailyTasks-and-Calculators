@@ -391,6 +391,8 @@ fun ExchangeCodeListCard(
 
 @Composable
 fun UpdatePreviewHomeScreen(
+    title: String = UPDATE_PREVIEW_CARD_TITLE,
+    subtitle: String = "公告列表",
     notices: List<UpdatePreviewNotice>,
     errorText: String?,
     onShowLocalData: () -> Unit,
@@ -430,7 +432,7 @@ fun UpdatePreviewHomeScreen(
             Spacer(modifier = Modifier.height(80.dp))
 
             StrokeText(
-                text = UPDATE_PREVIEW_CARD_TITLE,
+                text = title,
                 fontSize = 40,
                 fillColor = Color.White,
                 strokeColor = Color(0xFF202020),
@@ -440,7 +442,7 @@ fun UpdatePreviewHomeScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             StrokeText(
-                text = "公告列表",
+                text = subtitle,
                 fontSize = 24,
                 fillColor = Color.White,
                 strokeColor = Color(0xFF202020)
@@ -523,11 +525,12 @@ fun UpdatePreviewHomeScreen(
 
 @Composable
 fun UpdatePreviewDetailScreen(
+    title: String = "更新公告",
     notice: UpdatePreviewNotice,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
-        title = "更新公告",
+        title = title,
         subtitle = notice.date,
         onBack = onBack,
         pinnedTitleBar = true

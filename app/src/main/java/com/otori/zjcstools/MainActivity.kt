@@ -152,10 +152,14 @@ fun App() {
     var updatePreviewNoticeList by remember {
         mutableStateOf(loadCachedUpdatePreviewNotices(context))
     }
+    var officialNoticeList by remember {
+        mutableStateOf(loadCachedOfficialNotices(context))
+    }
     var exchangeCodeNoticeList by remember {
         mutableStateOf(loadCachedExchangeCodeNotices(context))
     }
     var updatePreviewErrorText by remember { mutableStateOf<String?>(null) }
+    var officialNoticeErrorText by remember { mutableStateOf<String?>(null) }
     var exchangeCodeErrorText by remember { mutableStateOf<String?>(null) }
     var availableAppUpdate by remember { mutableStateOf<AppUpdateInfo?>(null) }
     var appUpdateDownloadId by remember { mutableStateOf<Long?>(null) }
@@ -164,6 +168,9 @@ fun App() {
     var appUpdateAwaitingInstallPermission by remember { mutableStateOf(false) }
     var selectedUpdatePreviewNoticeId by remember {
         mutableStateOf(updatePreviewNoticeList.maxByOrNull { it.date }?.id.orEmpty())
+    }
+    var selectedOfficialNoticeId by remember {
+        mutableStateOf(officialNoticeList.maxByOrNull { it.date }?.id.orEmpty())
     }
 
     val bgList = listOf(
@@ -307,6 +314,11 @@ fun App() {
             selectedUpdatePreviewNoticeId = updatePreviewNoticeList.maxByOrNull { it.date }?.id.orEmpty()
         }
 
+        officialNoticeList = loadRemoteOfficialNotices(context)
+        if (officialNoticeList.none { it.id == selectedOfficialNoticeId }) {
+            selectedOfficialNoticeId = officialNoticeList.maxByOrNull { it.date }?.id.orEmpty()
+        }
+
         exchangeCodeNoticeList = loadRemoteExchangeCodeNotices(context)
         visibleExchangeCodeNotices = activeExchangeCodeNotices(
             context = context,
@@ -392,6 +404,31 @@ fun App() {
                     }
                     .onFailure { error ->
                         exchangeCodeErrorText = if (
+                            error is RemoteFileUnavailableException ||
+                            error !is IOException
+                        ) {
+                            "远程文件不可用"
+                        } else {
+                            "网络异常"
+                        }
+                    }
+            }
+
+            "official_notice_home" -> {
+                officialNoticeErrorText = null
+
+                fetchRemoteOfficialNoticesStrict(context)
+                    .onSuccess { notices ->
+                        officialNoticeList = notices
+                        if (officialNoticeList.none { it.id == selectedOfficialNoticeId }) {
+                            selectedOfficialNoticeId = officialNoticeList
+                                .maxByOrNull { it.date }
+                                ?.id
+                                .orEmpty()
+                        }
+                    }
+                    .onFailure { error ->
+                        officialNoticeErrorText = if (
                             error is RemoteFileUnavailableException ||
                             error !is IOException
                         ) {
@@ -514,7 +551,7 @@ fun App() {
                 onToolsClick = { navigateTo("tools_home") },
                 onGameDataClick = { navigateTo("game_data_home") },
                 onExchangeCodesClick = { navigateTo("exchange_codes") },
-                onUpdatePreviewClick = { navigateTo("update_preview_home") }
+                onGameNoticeClick = { navigateTo("game_notice_home") }
             )
 
             "daily_home" -> HomeScreen(
@@ -552,6 +589,12 @@ fun App() {
                 onBack = { goBack() }
             )
 
+            "game_notice_home" -> GameNoticeHomeScreen(
+                onOfficialNoticeClick = { navigateTo("official_notice_home") },
+                onUpdatePreviewClick = { navigateTo("update_preview_home") },
+                onBack = { goBack() }
+            )
+
             "exchange_codes" -> ExchangeCodeScreen(
                 notices = exchangeCodeNoticeList,
                 errorText = exchangeCodeErrorText,
@@ -565,6 +608,8 @@ fun App() {
             )
 
             "update_preview_home" -> UpdatePreviewHomeScreen(
+                title = UPDATE_PREVIEW_CARD_TITLE,
+                subtitle = "公告列表",
                 notices = updatePreviewNoticeList,
                 errorText = updatePreviewErrorText,
                 onShowLocalData = {
@@ -577,6 +622,21 @@ fun App() {
                 onBack = { goBack() }
             )
 
+            "official_notice_home" -> UpdatePreviewHomeScreen(
+                title = OFFICIAL_NOTICE_CARD_TITLE,
+                subtitle = "公告列表",
+                notices = officialNoticeList,
+                errorText = officialNoticeErrorText,
+                onShowLocalData = {
+                    officialNoticeErrorText = null
+                },
+                onNoticeClick = { noticeId ->
+                    selectedOfficialNoticeId = noticeId
+                    navigateTo("official_notice_detail")
+                },
+                onBack = { goBack() }
+            )
+
             "update_preview_detail" -> {
                 val selectedNotice = updatePreviewNoticeList
                     .firstOrNull { it.id == selectedUpdatePreviewNoticeId }
@@ -584,12 +644,33 @@ fun App() {
 
                 if (selectedNotice != null) {
                     UpdatePreviewDetailScreen(
+                        title = UPDATE_PREVIEW_CARD_TITLE,
                         notice = selectedNotice,
                         onBack = { goBack() }
                     )
                 } else {
                     SecondaryHomeScreen(
                         title = "更新公告",
+                        subtitle = "暂无公告",
+                        onBack = { goBack() }
+                    )
+                }
+            }
+
+            "official_notice_detail" -> {
+                val selectedNotice = officialNoticeList
+                    .firstOrNull { it.id == selectedOfficialNoticeId }
+                    ?: officialNoticeList.maxByOrNull { it.date }
+
+                if (selectedNotice != null) {
+                    UpdatePreviewDetailScreen(
+                        title = OFFICIAL_NOTICE_CARD_TITLE,
+                        notice = selectedNotice,
+                        onBack = { goBack() }
+                    )
+                } else {
+                    SecondaryHomeScreen(
+                        title = OFFICIAL_NOTICE_CARD_TITLE,
                         subtitle = "暂无公告",
                         onBack = { goBack() }
                     )
@@ -781,7 +862,7 @@ fun MainHomeScreen(
     onToolsClick: () -> Unit,
     onGameDataClick: () -> Unit,
     onExchangeCodesClick: () -> Unit,
-    onUpdatePreviewClick: () -> Unit
+    onGameNoticeClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -849,9 +930,9 @@ fun MainHomeScreen(
             Spacer(modifier = Modifier.height(18.dp))
 
             HomeCardButton(
-                title = UPDATE_PREVIEW_CARD_TITLE,
-                subtitle = UPDATE_PREVIEW_CARD_SUBTITLE,
-                onClick = onUpdatePreviewClick
+                title = GAME_NOTICE_CARD_TITLE,
+                subtitle = GAME_NOTICE_CARD_SUBTITLE,
+                onClick = onGameNoticeClick
             )
         }
     }
@@ -913,6 +994,34 @@ fun GameDataHomeScreen(
         subtitle = "整理和查看游戏相关数据",
         onBack = onBack
     )
+}
+
+
+@Composable
+fun GameNoticeHomeScreen(
+    onOfficialNoticeClick: () -> Unit,
+    onUpdatePreviewClick: () -> Unit,
+    onBack: () -> Unit
+) {
+    SecondaryHomeScreen(
+        title = GAME_NOTICE_CARD_TITLE,
+        subtitle = GAME_NOTICE_CARD_SUBTITLE,
+        onBack = onBack
+    ) {
+        HomeCardButton(
+            title = OFFICIAL_NOTICE_CARD_TITLE,
+            subtitle = OFFICIAL_NOTICE_CARD_SUBTITLE,
+            onClick = onOfficialNoticeClick
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        HomeCardButton(
+            title = UPDATE_PREVIEW_CARD_TITLE,
+            subtitle = UPDATE_PREVIEW_CARD_SUBTITLE,
+            onClick = onUpdatePreviewClick
+        )
+    }
 }
 
 

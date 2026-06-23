@@ -13,7 +13,11 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDate
-const val UPDATE_PREVIEW_CARD_TITLE = "先遣服更新前瞻"
+const val GAME_NOTICE_CARD_TITLE = "游戏公告"
+const val GAME_NOTICE_CARD_SUBTITLE = "查看正式服和先遣服更新公告"
+const val OFFICIAL_NOTICE_CARD_TITLE = "正式服公告"
+const val OFFICIAL_NOTICE_CARD_SUBTITLE = "查看正式服版本更新公告"
+const val UPDATE_PREVIEW_CARD_TITLE = "先遣服公告"
 const val UPDATE_PREVIEW_CARD_SUBTITLE = "查看先遣服版本更新公告和调整预告"
 const val EXCHANGE_CODE_CARD_TITLE = "兑换码"
 const val EXCHANGE_CODE_CARD_SUBTITLE = "查看当前可用兑换码和近期过期记录"
@@ -21,10 +25,13 @@ const val REMOTE_EXCHANGE_CODES_URL =
     "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/DHM_codes.json"
 const val REMOTE_UPDATE_PREVIEW_URL =
     "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/XQF_Announcements.json"
+const val REMOTE_OFFICIAL_NOTICE_URL =
+    "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/ZSF_Announcements.json"
 const val REMOTE_APP_UPDATE_URL =
     "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/app_update.json"
 const val BUNDLED_EXCHANGE_CODES_FILE = "DHM_codes.json"
 const val BUNDLED_UPDATE_PREVIEW_FILE = "XQF_Announcements.json"
+const val BUNDLED_OFFICIAL_NOTICE_FILE = "ZSF_Announcements.json"
 
 data class UpdatePreviewNotice(
     val id: String,
@@ -58,12 +65,15 @@ const val HIDDEN_EXCHANGE_CODES_KEY = "hidden_exchange_codes"
 const val MENU_HIDDEN_EXCHANGE_CODES_KEY = "menu_hidden_exchange_codes"
 const val CACHED_EXCHANGE_CODES_JSON_KEY = "cached_exchange_codes_json"
 const val CACHED_UPDATE_PREVIEW_JSON_KEY = "cached_update_preview_json"
+const val CACHED_OFFICIAL_NOTICE_JSON_KEY = "cached_official_notice_json"
 
 class RemoteFileUnavailableException(message: String) : Exception(message)
 
 val exchangeCodeNotices = emptyList<ExchangeCodeNotice>()
 
 val updatePreviewNotices = emptyList<UpdatePreviewNotice>()
+
+val officialNotices = emptyList<UpdatePreviewNotice>()
 
 fun JSONObject.firstText(vararg names: String): String? {
     names.forEach { name ->
@@ -256,6 +266,11 @@ fun loadBundledUpdatePreviewNotices(context: Context): List<UpdatePreviewNotice>
         ?.takeIf { it.isNotEmpty() }
 }
 
+fun loadBundledOfficialNotices(context: Context): List<UpdatePreviewNotice>? {
+    return readBundledJson(context, BUNDLED_OFFICIAL_NOTICE_FILE)
+        ?.let(::parseUpdatePreviewNotices)
+}
+
 fun readBundledJson(context: Context, fileName: String): String? {
     return runCatching {
         context.assets.open(fileName).bufferedReader(Charsets.UTF_8).use { it.readText() }
@@ -271,6 +286,16 @@ fun loadCachedUpdatePreviewNotices(context: Context): List<UpdatePreviewNotice> 
         ?.takeIf { it.isNotEmpty() }
         ?: loadBundledUpdatePreviewNotices(context)
         ?: updatePreviewNotices
+}
+
+fun loadCachedOfficialNotices(context: Context): List<UpdatePreviewNotice> {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    val cachedJson = prefs.getString(CACHED_OFFICIAL_NOTICE_JSON_KEY, null)
+
+    return cachedJson
+        ?.let(::parseUpdatePreviewNotices)
+        ?: loadBundledOfficialNotices(context)
+        ?: officialNotices
 }
 
 suspend fun loadRemoteExchangeCodeNotices(context: Context): List<ExchangeCodeNotice> {
@@ -330,6 +355,21 @@ suspend fun loadRemoteUpdatePreviewNotices(context: Context): List<UpdatePreview
     }
 }
 
+suspend fun loadRemoteOfficialNotices(context: Context): List<UpdatePreviewNotice> {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+
+    return runCatching {
+        val rawJson = downloadText(REMOTE_OFFICIAL_NOTICE_URL)
+        val notices = parseUpdatePreviewNotices(rawJson)
+        prefs.edit(commit = true) {
+            putString(CACHED_OFFICIAL_NOTICE_JSON_KEY, rawJson)
+        }
+        notices
+    }.getOrElse {
+        loadCachedOfficialNotices(context)
+    }
+}
+
 suspend fun fetchRemoteUpdatePreviewNoticesStrict(context: Context): Result<List<UpdatePreviewNotice>> {
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
 
@@ -343,6 +383,21 @@ suspend fun fetchRemoteUpdatePreviewNoticesStrict(context: Context): Result<List
 
         prefs.edit(commit = true) {
             putString(CACHED_UPDATE_PREVIEW_JSON_KEY, rawJson)
+        }
+
+        notices
+    }
+}
+
+suspend fun fetchRemoteOfficialNoticesStrict(context: Context): Result<List<UpdatePreviewNotice>> {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+
+    return runCatching {
+        val rawJson = downloadText(REMOTE_OFFICIAL_NOTICE_URL)
+        val notices = parseUpdatePreviewNotices(rawJson)
+
+        prefs.edit(commit = true) {
+            putString(CACHED_OFFICIAL_NOTICE_JSON_KEY, rawJson)
         }
 
         notices
