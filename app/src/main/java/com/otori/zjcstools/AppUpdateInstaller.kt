@@ -28,7 +28,7 @@ data class AppUpdateDownloadState(
 fun enqueueAppUpdateDownload(context: Context, updateInfo: AppUpdateInfo): Long {
     val fileName = "zjcsTools-v${updateInfo.versionName.ifBlank { updateInfo.versionCode }}-release.apk"
     val request = DownloadManager.Request(Uri.parse(updateInfo.apkUrl)).apply {
-        setTitle("杖剑工具 ${updateInfo.versionName.ifBlank { "新版本" }}")
+        setTitle("杖剑小助手 ${updateInfo.versionName.ifBlank { "新版本" }}")
         setDescription("正在下载更新安装包")
         setMimeType(APK_MIME_TYPE)
         setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)

@@ -883,7 +883,7 @@ fun MainHomeScreen(
             Spacer(modifier = Modifier.height(80.dp))
 
             StrokeText(
-                text = "杖剑工具",
+                text = "杖剑小助手",
                 fontSize = 40,
                 fillColor = Color.White,
                 strokeColor = Color(0xFF202020),
@@ -982,8 +982,8 @@ fun ToolsHomeScreen(
         Spacer(modifier = Modifier.height(18.dp))
 
         HomeCardButton(
-            title = "委托怪物查询",
-            subtitle = "查询委托怪物所在副本地图",
+            title = "每日委托怪物搜索",
+            subtitle = "查找每日委托所需怪物在副本内的位置",
             onClick = onCommissionMonsterLookupClick
         )
     }
