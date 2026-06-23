@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "versionCode": 8,
+  "versionCode": 9,
   "versionName": "2.4.0",
   "apkUrl": "https://gitee.com/evilian/ZJCS-Tools_DailyTasks-and-Calculators/releases/download/v2.4.0/zjcsTools-v2.4.0-release.apk",
   "forceUpdate": false,

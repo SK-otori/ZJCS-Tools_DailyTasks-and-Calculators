@@ -958,6 +958,14 @@ fun ToolsHomeScreen(
         Spacer(modifier = Modifier.height(18.dp))
 
         HomeCardButton(
+            title = "每日委托怪物搜索",
+            subtitle = "查找每日委托所需怪物在副本内的位置",
+            onClick = onCommissionMonsterLookupClick
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        HomeCardButton(
             title = "属性晨星性价比",
             subtitle = "施工中",
             onClick = onAttributeCalculatorClick
@@ -979,13 +987,6 @@ fun ToolsHomeScreen(
             onClick = onAssaultArmorBreakCalculatorClick
         )
 
-        Spacer(modifier = Modifier.height(18.dp))
-
-        HomeCardButton(
-            title = "每日委托怪物搜索",
-            subtitle = "查找每日委托所需怪物在副本内的位置",
-            onClick = onCommissionMonsterLookupClick
-        )
     }
 }
 
