@@ -386,6 +386,18 @@ fun ExchangeCodeListCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val rewardsText = notice.rewardsSummary()
+            if (rewardsText.isNotBlank()) {
+                Text(
+                    text = "奖励：$rewardsText",
+                    fontSize = 15.sp,
+                    lineHeight = 21.sp,
+                    color = if (expired) Color(0xFF777777) else Color(0xFF555555)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -408,18 +420,6 @@ fun ExchangeCodeListCard(
                         Text("不再提醒")
                     }
                 }
-            }
-
-            val rewardsText = notice.rewardsSummary()
-            if (rewardsText.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "奖励：$rewardsText",
-                    fontSize = 15.sp,
-                    lineHeight = 21.sp,
-                    color = if (expired) Color(0xFF777777) else Color(0xFF555555)
-                )
             }
         }
     }
