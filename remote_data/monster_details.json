@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "monsters": [
+    {
+      "displayName": "野猪",
+      "variableName": "monster_senguo_yezhu",
+      "pinyinName": "yezhu"
+    },
+    {
+      "displayName": "臭弹花",
+      "variableName": "monster_senguo_choudanhua",
+      "pinyinName": "choudanhua"
+    },
+    {
+      "displayName": "森狼打手",
+      "variableName": "monster_senguo_senlangdashou",
+      "pinyinName": "senlangdashou"
+    },
+    {
+      "displayName": "森狼投手",
+      "variableName": "monster_senguo_senlangtoushou",
+      "pinyinName": "senlangtoushou"
+    },
+    {
+      "displayName": "飞镰螳螂",
+      "variableName": "monster_senguo_feiliantanglang",
+      "pinyinName": "feiliantanglang"
+    },
+    {
+      "displayName": "水丝蜘蛛",
+      "variableName": "monster_senguo_shuisizhizhu",
+      "pinyinName": "shuisizhizhu"
+    },
+    {
+      "displayName": "挖矿蝎子",
+      "variableName": "monster_shanguo_wakuangxiezi",
+      "pinyinName": "wakuangxiezi"
+    },
+    {
+      "displayName": "蒸汽龙虾",
+      "variableName": "monster_shanguo_zhengqilongxia",
+      "pinyinName": "zhengqilongxia"
+    },
+    {
+      "displayName": "机关鹰",
+      "variableName": "monster_shanguo_jiguanying",
+      "pinyinName": "jiguanying"
+    },
+    {
+      "displayName": "机关蛇",
+      "variableName": "monster_shanguo_jiguanshe",
+      "pinyinName": "jiguanshe"
+    },
+    {
+      "displayName": "仙人掌怪",
+      "variableName": "monster_shanguo_xianrenzhangguai",
+      "pinyinName": "xianrenzhangguai"
+    },
+    {
+      "displayName": "山狼投手",
+      "variableName": "monster_shanguo_shanlangtoushou",
+      "pinyinName": "shanlangtoushou"
+    },
+    {
+      "displayName": "山狼打手",
+      "variableName": "monster_shanguo_shanlangdashou",
+      "pinyinName": "shanlangdashou"
+    },
+    {
+      "displayName": "青蛙怪",
+      "variableName": "monster_zeguo_qingwaguai",
+      "pinyinName": "qingwaguai"
+    },
+    {
+      "displayName": "小狐妖",
+      "variableName": "monster_zeguo_xiaohuyao",
+      "pinyinName": "xiaohuyao"
+    },
+    {
+      "displayName": "贝壳精",
+      "variableName": "monster_zeguo_beikejing",
+      "pinyinName": "beikejing"
+    },
+    {
+      "displayName": "鱼怪",
+      "variableName": "monster_zeguo_yuguai",
+      "pinyinName": "yuguai"
+    },
+    {
+      "displayName": "独角仙",
+      "variableName": "monster_zeguo_dujiaoxian",
+      "pinyinName": "dujiaoxian"
+    },
+    {
+      "displayName": "藤蔓怪",
+      "variableName": "monster_zeguo_tengwanguai",
+      "pinyinName": "tengwanguai"
+    },
+    {
+      "displayName": "锹甲",
+      "variableName": "monster_zeguo_qiaojia",
+      "pinyinName": "qiaojia"
+    },
+    {
+      "displayName": "水灯笼",
+      "variableName": "monster_zeguo_shuidenglong",
+      "pinyinName": "shuidenglong"
+    },
+    {
+      "displayName": "潮狼盾兵",
+      "variableName": "monster_zeguo_chaolangdunbing",
+      "pinyinName": "chaolangdunbing"
+    },
+    {
+      "displayName": "泥田坊",
+      "variableName": "monster_zeguo_nitianfang",
+      "pinyinName": "nitianfang"
+    },
+    {
+      "displayName": "雁木",
+      "variableName": "monster_zeguo_yanmu",
+      "pinyinName": "yanmu"
+    },
+    {
+      "displayName": "河童",
+      "variableName": "monster_zeguo_hetong",
+      "pinyinName": "hetong"
+    },
+    {
+      "displayName": "潮狼哨兵",
+      "variableName": "monster_zeguo_chaolangsahobing",
+      "pinyinName": "chaolangsahobing"
+    },
+    {
+      "displayName": "潮狼打手",
+      "variableName": "monster_zeguo_chaolangdashou",
+      "pinyinName": "chaolangdashou"
+    },
+    {
+      "displayName": "潮狼投手",
+      "variableName": "monster_zeguo_chaolangtoushou",
+      "pinyinName": "chaolangtoushou"
+    },
+    {
+      "displayName": "穿云甲",
+      "variableName": "monster_longguo_chuanyunjia",
+      "pinyinName": "chuanyunjia"
+    },
+    {
+      "displayName": "小青蛇",
+      "variableName": "monster_longguo_xiaoqingshe",
+      "pinyinName": "xiaoqingshe"
+    },
+    {
+      "displayName": "火鼠",
+      "variableName": "monster_longguo_huoshu",
+      "pinyinName": "huoshu"
+    },
+    {
+      "displayName": "火云獒",
+      "variableName": "monster_longguo_huoyunao",
+      "pinyinName": "huoyunao"
+    },
+    {
+      "displayName": "灵狼盾兵",
+      "variableName": "monster_longguo_linglangdunbing",
+      "pinyinName": "linglangdunbing"
+    },
+    {
+      "displayName": "灵狼哨兵",
+      "variableName": "monster_longguo_linglangshaobing",
+      "pinyinName": "linglangshaobing"
+    },
+    {
+      "displayName": "青铜面",
+      "variableName": "monster_longguo_qingtongmian",
+      "pinyinName": "qingtongmian"
+    },
+    {
+      "displayName": "青铜炉",
+      "variableName": "monster_longguo_qingtonglu",
+      "pinyinName": "qingtonglu"
+    },
+    {
+      "displayName": "儒雅尘士",
+      "variableName": "monster_longguo_ruyachenshi",
+      "pinyinName": "ruyachenshi"
+    },
+    {
+      "displayName": "尘偶",
+      "variableName": "monster_longguo_chenou",
+      "pinyinName": "chenou"
+    },
+    {
+      "displayName": "狻猊",
+      "variableName": "monster_longguo_suanni",
+      "pinyinName": "suanni"
+    },
+    {
+      "displayName": "青铜镜",
+      "variableName": "monster_longguo_qingtongjing",
+      "pinyinName": "qingtongjing"
+    },
+    {
+      "displayName": "陶灵",
+      "variableName": "monster_longguo_taoling",
+      "pinyinName": "taoling"
+    },
+    {
+      "displayName": "草人",
+      "variableName": "monster_longguo_caoren",
+      "pinyinName": "caoren"
+    },
+    {
+      "displayName": "白猿",
+      "variableName": "monster_longguo_baiyuan",
+      "pinyinName": "baiyuan"
+    },
+    {
+      "displayName": "雷云子",
+      "variableName": "monster_longguo_leiyunzi",
+      "pinyinName": "leiyunzi"
+    },
+    {
+      "displayName": "寒炉龟",
+      "variableName": "monster_longguo_hanlugui",
+      "pinyinName": "hanlugui"
+    },
+    {
+      "displayName": "土缕",
+      "variableName": "monster_longguo_tulv",
+      "pinyinName": "tulv"
+    },
+    {
+      "displayName": "荷花鱼",
+      "variableName": "monster_longguo_hehuayu",
+      "pinyinName": "hehuayu"
+    }
+  ]
+}

@@ -44,6 +44,9 @@ jobs:
               ("remote_data/XQF_Announcements.json", "XQF_Announcements.json"),
               ("remote_data/ZSF_Announcements.json", "ZSF_Announcements.json"),
               ("remote_data/app_update.json", "app_update.json"),
+              ("remote_data/app_config.json", "app_config.json"),
+              ("remote_data/dungeon_details.json", "dungeon_details.json"),
+              ("remote_data/monster_details.json", "monster_details.json"),
           ]
 
           def upload(local_path, object_name):

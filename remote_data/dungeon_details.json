@@ -1,0 +1,2908 @@
+{
+  "version": 10,
+  "dungeons": [
+    {
+      "name": "世界之树 普通/困难",
+      "variableName": "instance_senguo_sjzs_nh",
+      "nodes": [
+        {
+          "id": "szg_12",
+          "label": "终点",
+          "row": 0,
+          "columnSlot": 3,
+          "type": "destination"
+        },
+        {
+          "id": "szg_11",
+          "label": "首领",
+          "row": 1,
+          "columnSlot": 3,
+          "type": "boss"
+        },
+        {
+          "id": "szg_10",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 3,
+          "type": "camp"
+        },
+        {
+          "id": "szg_8",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 2,
+          "type": "elite"
+        },
+        {
+          "id": "szg_9",
+          "label": "杂兵",
+          "row": 3,
+          "columnSlot": 4,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_senguo_feiliantanglang",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_senguo_shuisizhizhu",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "szg_6",
+          "label": "杂兵",
+          "row": 4,
+          "columnSlot": 2,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_senguo_senlangdashou",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_senguo_senlangtoushou",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "szg_7",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 3,
+          "type": "camp"
+        },
+        {
+          "id": "szg_4",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 3,
+          "type": "boss"
+        },
+        {
+          "id": "szg_5",
+          "label": "精英",
+          "row": 5,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_senguo_yezhu",
+              "count": 3
+            },
+            {
+              "monsterVariableName": "monster_senguo_choudanhua",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "szg_2",
+          "label": "杂兵",
+          "row": 6,
+          "columnSlot": 2,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_senguo_yezhu",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_senguo_choudanhua",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "szg_3",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_senguo_yezhu",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "szg_1",
+          "label": "起始营地",
+          "row": 7,
+          "columnSlot": 3,
+          "type": "camp"
+        }
+      ],
+      "routes": [
+        {
+          "fromId": "szg_1",
+          "toId": "szg_2"
+        },
+        {
+          "fromId": "szg_1",
+          "toId": "szg_3"
+        },
+        {
+          "fromId": "szg_2",
+          "toId": "szg_4"
+        },
+        {
+          "fromId": "szg_3",
+          "toId": "szg_4"
+        },
+        {
+          "fromId": "szg_3",
+          "toId": "szg_5"
+        },
+        {
+          "fromId": "szg_4",
+          "toId": "szg_6"
+        },
+        {
+          "fromId": "szg_4",
+          "toId": "szg_7"
+        },
+        {
+          "fromId": "szg_5",
+          "toId": "szg_7"
+        },
+        {
+          "fromId": "szg_6",
+          "toId": "szg_8"
+        },
+        {
+          "fromId": "szg_7",
+          "toId": "szg_8"
+        },
+        {
+          "fromId": "szg_7",
+          "toId": "szg_9"
+        },
+        {
+          "fromId": "szg_8",
+          "toId": "szg_10"
+        },
+        {
+          "fromId": "szg_9",
+          "toId": "szg_10"
+        },
+        {
+          "fromId": "szg_10",
+          "toId": "szg_11"
+        },
+        {
+          "fromId": "szg_11",
+          "toId": "szg_12"
+        }
+      ],
+      "sortOrder": 1
+    },
+    {
+      "name": "机神山 普通/困难",
+      "variableName": "instance_shanguo_jss_nh",
+      "nodes": [
+        {
+          "id": "jss_16",
+          "label": "终点",
+          "row": 0,
+          "columnSlot": 3,
+          "type": "destination"
+        },
+        {
+          "id": "jss_15",
+          "label": "首领",
+          "row": 1,
+          "columnSlot": 3,
+          "type": "boss"
+        },
+        {
+          "id": "jss_13",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 2,
+          "type": "camp"
+        },
+        {
+          "id": "jss_14",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 4,
+          "type": "camp"
+        },
+        {
+          "id": "jss_9",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 1,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_shanguo_wakuangxiezi",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jss_10",
+          "label": "杂兵",
+          "row": 3,
+          "columnSlot": 2,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_shanguo_wakuangxiezi",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_shanguo_xianrenzhangguai",
+              "count": 9
+            }
+          ]
+        },
+        {
+          "id": "jss_11",
+          "label": "杂兵",
+          "row": 3,
+          "columnSlot": 4,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_shanguo_shanlangtoushou",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_shanguo_shanlangdashou",
+              "count": 9
+            }
+          ]
+        },
+        {
+          "id": "jss_12",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 5,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_shanguo_zhengqilongxia",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jss_7",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 2,
+          "type": "camp"
+        },
+        {
+          "id": "jss_8",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_shanguo_zhengqilongxia",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_shanguo_jiguanshe",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jss_4",
+          "label": "精英",
+          "row": 5,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_shanguo_wakuangxiezi",
+              "count": 3
+            },
+            {
+              "monsterVariableName": "monster_shanguo_jiguanying",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jss_5",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 3,
+          "type": "boss"
+        },
+        {
+          "id": "jss_6",
+          "label": "杂兵",
+          "row": 5,
+          "columnSlot": 4,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_shanguo_jiguanshe",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_shanguo_jiguanying",
+              "count": 9
+            }
+          ]
+        },
+        {
+          "id": "jss_2",
+          "label": "杂兵",
+          "row": 6,
+          "columnSlot": 2,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_shanguo_wakuangxiezi",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_shanguo_zhengqilongxia",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "jss_3",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_shanguo_wakuangxiezi",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "jss_1",
+          "label": "起始营地",
+          "row": 7,
+          "columnSlot": 3,
+          "type": "camp"
+        }
+      ],
+      "routes": [
+        {
+          "fromId": "jss_1",
+          "toId": "jss_2"
+        },
+        {
+          "fromId": "jss_1",
+          "toId": "jss_3"
+        },
+        {
+          "fromId": "jss_2",
+          "toId": "jss_4"
+        },
+        {
+          "fromId": "jss_2",
+          "toId": "jss_5"
+        },
+        {
+          "fromId": "jss_3",
+          "toId": "jss_5"
+        },
+        {
+          "fromId": "jss_3",
+          "toId": "jss_6"
+        },
+        {
+          "fromId": "jss_4",
+          "toId": "jss_7"
+        },
+        {
+          "fromId": "jss_5",
+          "toId": "jss_7"
+        },
+        {
+          "fromId": "jss_5",
+          "toId": "jss_8"
+        },
+        {
+          "fromId": "jss_6",
+          "toId": "jss_8"
+        },
+        {
+          "fromId": "jss_7",
+          "toId": "jss_9"
+        },
+        {
+          "fromId": "jss_7",
+          "toId": "jss_10"
+        },
+        {
+          "fromId": "jss_8",
+          "toId": "jss_11"
+        },
+        {
+          "fromId": "jss_8",
+          "toId": "jss_12"
+        },
+        {
+          "fromId": "jss_9",
+          "toId": "jss_13"
+        },
+        {
+          "fromId": "jss_10",
+          "toId": "jss_13"
+        },
+        {
+          "fromId": "jss_11",
+          "toId": "jss_14"
+        },
+        {
+          "fromId": "jss_12",
+          "toId": "jss_14"
+        },
+        {
+          "fromId": "jss_13",
+          "toId": "jss_15"
+        },
+        {
+          "fromId": "jss_14",
+          "toId": "jss_15"
+        },
+        {
+          "fromId": "jss_15",
+          "toId": "jss_16"
+        }
+      ],
+      "sortOrder": 2
+    },
+    {
+      "name": "海之宫遗迹 普通/困难",
+      "variableName": "instance_zeguo_hzgyj_nh",
+      "nodes": [
+        {
+          "id": "hzgyj_16",
+          "label": "终点",
+          "row": 0,
+          "columnSlot": 3,
+          "type": "destination"
+        },
+        {
+          "id": "hzgyj_15",
+          "label": "首领",
+          "row": 1,
+          "columnSlot": 3,
+          "type": "boss"
+        },
+        {
+          "id": "hzgyj_12",
+          "label": "精英",
+          "row": 2,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_qingwaguai",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_zeguo_tengwanguai",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hzgyj_13",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 3,
+          "type": "camp"
+        },
+        {
+          "id": "hzgyj_14",
+          "label": "精英",
+          "row": 2,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_chaolangdunbing",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hzgyj_10",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_qiaojia",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hzgyj_11",
+          "label": "杂兵",
+          "row": 3,
+          "columnSlot": 4,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_xiaohuyao",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_zeguo_shuidenglong",
+              "count": 9
+            }
+          ]
+        },
+        {
+          "id": "hzgyj_7",
+          "label": "杂兵",
+          "row": 4,
+          "columnSlot": 1,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_tengwanguai",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_zeguo_beikejing",
+              "count": 9
+            }
+          ]
+        },
+        {
+          "id": "hzgyj_8",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 3,
+          "type": "camp"
+        },
+        {
+          "id": "hzgyj_9",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_yuguai",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_zeguo_beikejing",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hzgyj_5",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 2,
+          "type": "boss"
+        },
+        {
+          "id": "hzgyj_6",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 4,
+          "type": "boss"
+        },
+        {
+          "id": "hzgyj_2",
+          "label": "杂兵",
+          "row": 6,
+          "columnSlot": 2,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_qingwaguai",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_zeguo_xiaohuyao",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "hzgyj_3",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_beikejing",
+              "count": 3
+            },
+            {
+              "monsterVariableName": "monster_zeguo_yuguai",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hzgyj_4",
+          "label": "杂兵",
+          "row": 6,
+          "columnSlot": 4,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_dujiaoxian",
+              "count": 12
+            },
+            {
+              "monsterVariableName": "monster_zeguo_yuguai",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hzgyj_1",
+          "label": "起始营地",
+          "row": 7,
+          "columnSlot": 3,
+          "type": "camp"
+        }
+      ],
+      "routes": [
+        {
+          "fromId": "hzgyj_1",
+          "toId": "hzgyj_2"
+        },
+        {
+          "fromId": "hzgyj_1",
+          "toId": "hzgyj_3"
+        },
+        {
+          "fromId": "hzgyj_1",
+          "toId": "hzgyj_4"
+        },
+        {
+          "fromId": "hzgyj_2",
+          "toId": "hzgyj_5"
+        },
+        {
+          "fromId": "hzgyj_3",
+          "toId": "hzgyj_5"
+        },
+        {
+          "fromId": "hzgyj_4",
+          "toId": "hzgyj_6"
+        },
+        {
+          "fromId": "hzgyj_5",
+          "toId": "hzgyj_7"
+        },
+        {
+          "fromId": "hzgyj_5",
+          "toId": "hzgyj_8"
+        },
+        {
+          "fromId": "hzgyj_6",
+          "toId": "hzgyj_8"
+        },
+        {
+          "fromId": "hzgyj_6",
+          "toId": "hzgyj_9"
+        },
+        {
+          "fromId": "hzgyj_7",
+          "toId": "hzgyj_10"
+        },
+        {
+          "fromId": "hzgyj_8",
+          "toId": "hzgyj_10"
+        },
+        {
+          "fromId": "hzgyj_8",
+          "toId": "hzgyj_11"
+        },
+        {
+          "fromId": "hzgyj_9",
+          "toId": "hzgyj_11"
+        },
+        {
+          "fromId": "hzgyj_10",
+          "toId": "hzgyj_12"
+        },
+        {
+          "fromId": "hzgyj_10",
+          "toId": "hzgyj_13"
+        },
+        {
+          "fromId": "hzgyj_11",
+          "toId": "hzgyj_13"
+        },
+        {
+          "fromId": "hzgyj_11",
+          "toId": "hzgyj_14"
+        },
+        {
+          "fromId": "hzgyj_12",
+          "toId": "hzgyj_15"
+        },
+        {
+          "fromId": "hzgyj_13",
+          "toId": "hzgyj_15"
+        },
+        {
+          "fromId": "hzgyj_14",
+          "toId": "hzgyj_15"
+        },
+        {
+          "fromId": "hzgyj_15",
+          "toId": "hzgyj_16"
+        }
+      ],
+      "sortOrder": 3
+    },
+    {
+      "name": "源水大社 普通/困难",
+      "variableName": "instance_zeguo_ysds_nh",
+      "nodes": [
+        {
+          "id": "ysds_17",
+          "label": "终点",
+          "row": 0,
+          "columnSlot": 3,
+          "type": "destination"
+        },
+        {
+          "id": "ysds_16",
+          "label": "首领",
+          "row": 1,
+          "columnSlot": 3,
+          "type": "boss"
+        },
+        {
+          "id": "ysds_13",
+          "label": "精英",
+          "row": 2,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_beikejing",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_zeguo_hetong",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "ysds_14",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 3,
+          "type": "camp"
+        },
+        {
+          "id": "ysds_15",
+          "label": "精英",
+          "row": 2,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_yanmu",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_zeguo_qiaojia",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "ysds_11",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_tengwanguai",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "ysds_12",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_yanmu",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "ysds_7",
+          "label": "杂兵",
+          "row": 4,
+          "columnSlot": 1,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_hetong",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_zeguo_dujiaoxian",
+              "count": 9
+            }
+          ]
+        },
+        {
+          "id": "ysds_8",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 2,
+          "type": "camp"
+        },
+        {
+          "id": "ysds_9",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 4,
+          "type": "camp"
+        },
+        {
+          "id": "ysds_10",
+          "label": "杂兵",
+          "row": 4,
+          "columnSlot": 5,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_chaolangdunbing",
+              "count": 12
+            },
+            {
+              "monsterVariableName": "monster_zeguo_chaolangsahobing",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "ysds_5",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 2,
+          "type": "boss"
+        },
+        {
+          "id": "ysds_6",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 4,
+          "type": "boss"
+        },
+        {
+          "id": "ysds_2",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_xiaohuyao",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "ysds_3",
+          "label": "杂兵",
+          "row": 6,
+          "columnSlot": 3,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_nitianfang",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_zeguo_yuguai",
+              "count": 9
+            }
+          ]
+        },
+        {
+          "id": "ysds_4",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_yanmu",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "ysds_1",
+          "label": "起始营地",
+          "row": 7,
+          "columnSlot": 3,
+          "type": "camp"
+        }
+      ],
+      "routes": [
+        {
+          "fromId": "ysds_1",
+          "toId": "ysds_2"
+        },
+        {
+          "fromId": "ysds_1",
+          "toId": "ysds_3"
+        },
+        {
+          "fromId": "ysds_1",
+          "toId": "ysds_4"
+        },
+        {
+          "fromId": "ysds_2",
+          "toId": "ysds_5"
+        },
+        {
+          "fromId": "ysds_3",
+          "toId": "ysds_5"
+        },
+        {
+          "fromId": "ysds_3",
+          "toId": "ysds_6"
+        },
+        {
+          "fromId": "ysds_4",
+          "toId": "ysds_6"
+        },
+        {
+          "fromId": "ysds_5",
+          "toId": "ysds_7"
+        },
+        {
+          "fromId": "ysds_5",
+          "toId": "ysds_8"
+        },
+        {
+          "fromId": "ysds_6",
+          "toId": "ysds_9"
+        },
+        {
+          "fromId": "ysds_6",
+          "toId": "ysds_10"
+        },
+        {
+          "fromId": "ysds_7",
+          "toId": "ysds_11"
+        },
+        {
+          "fromId": "ysds_8",
+          "toId": "ysds_11"
+        },
+        {
+          "fromId": "ysds_9",
+          "toId": "ysds_12"
+        },
+        {
+          "fromId": "ysds_10",
+          "toId": "ysds_12"
+        },
+        {
+          "fromId": "ysds_11",
+          "toId": "ysds_13"
+        },
+        {
+          "fromId": "ysds_11",
+          "toId": "ysds_14"
+        },
+        {
+          "fromId": "ysds_12",
+          "toId": "ysds_14"
+        },
+        {
+          "fromId": "ysds_12",
+          "toId": "ysds_15"
+        },
+        {
+          "fromId": "ysds_13",
+          "toId": "ysds_16"
+        },
+        {
+          "fromId": "ysds_14",
+          "toId": "ysds_16"
+        },
+        {
+          "fromId": "ysds_15",
+          "toId": "ysds_16"
+        },
+        {
+          "fromId": "ysds_16",
+          "toId": "ysds_17"
+        }
+      ],
+      "sortOrder": 4
+    },
+    {
+      "name": "源水大社 噩梦",
+      "variableName": "instance_zeguo_ysds_nightmare",
+      "nodes": [
+        {
+          "id": "ysds_17",
+          "label": "终点",
+          "row": 0,
+          "columnSlot": 3,
+          "type": "destination"
+        },
+        {
+          "id": "ysds_16",
+          "label": "首领",
+          "row": 1,
+          "columnSlot": 3,
+          "type": "boss"
+        },
+        {
+          "id": "ysds_13",
+          "label": "精英",
+          "row": 2,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_beikejing",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_zeguo_hetong",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "ysds_14",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 3,
+          "type": "camp"
+        },
+        {
+          "id": "ysds_15",
+          "label": "精英",
+          "row": 2,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_yanmu",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_zeguo_qiaojia",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "ysds_11",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_tengwanguai",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "ysds_12",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_yanmu",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "ysds_7",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 1,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_hetong",
+              "count": 3
+            },
+            {
+              "monsterVariableName": "monster_zeguo_dujiaoxian",
+              "count": 5
+            }
+          ]
+        },
+        {
+          "id": "ysds_8",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 2,
+          "type": "camp"
+        },
+        {
+          "id": "ysds_9",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 4,
+          "type": "camp"
+        },
+        {
+          "id": "ysds_10",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 5,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_chaolangdunbing",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_zeguo_chaolangsahobing",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "ysds_5",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 2,
+          "type": "boss"
+        },
+        {
+          "id": "ysds_6",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 4,
+          "type": "boss"
+        },
+        {
+          "id": "ysds_2",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_xiaohuyao",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "ysds_3",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_nitianfang",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "ysds_4",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_yanmu",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "ysds_1",
+          "label": "起始营地",
+          "row": 7,
+          "columnSlot": 3,
+          "type": "camp"
+        }
+      ],
+      "routes": [
+        {
+          "fromId": "ysds_1",
+          "toId": "ysds_2"
+        },
+        {
+          "fromId": "ysds_1",
+          "toId": "ysds_3"
+        },
+        {
+          "fromId": "ysds_1",
+          "toId": "ysds_4"
+        },
+        {
+          "fromId": "ysds_2",
+          "toId": "ysds_5"
+        },
+        {
+          "fromId": "ysds_3",
+          "toId": "ysds_5"
+        },
+        {
+          "fromId": "ysds_3",
+          "toId": "ysds_6"
+        },
+        {
+          "fromId": "ysds_4",
+          "toId": "ysds_6"
+        },
+        {
+          "fromId": "ysds_5",
+          "toId": "ysds_7"
+        },
+        {
+          "fromId": "ysds_5",
+          "toId": "ysds_8"
+        },
+        {
+          "fromId": "ysds_6",
+          "toId": "ysds_9"
+        },
+        {
+          "fromId": "ysds_6",
+          "toId": "ysds_10"
+        },
+        {
+          "fromId": "ysds_7",
+          "toId": "ysds_11"
+        },
+        {
+          "fromId": "ysds_8",
+          "toId": "ysds_11"
+        },
+        {
+          "fromId": "ysds_9",
+          "toId": "ysds_12"
+        },
+        {
+          "fromId": "ysds_10",
+          "toId": "ysds_12"
+        },
+        {
+          "fromId": "ysds_11",
+          "toId": "ysds_13"
+        },
+        {
+          "fromId": "ysds_11",
+          "toId": "ysds_14"
+        },
+        {
+          "fromId": "ysds_12",
+          "toId": "ysds_14"
+        },
+        {
+          "fromId": "ysds_12",
+          "toId": "ysds_15"
+        },
+        {
+          "fromId": "ysds_13",
+          "toId": "ysds_16"
+        },
+        {
+          "fromId": "ysds_14",
+          "toId": "ysds_16"
+        },
+        {
+          "fromId": "ysds_15",
+          "toId": "ysds_16"
+        },
+        {
+          "fromId": "ysds_16",
+          "toId": "ysds_17"
+        }
+      ],
+      "sortOrder": 4
+    },
+    {
+      "name": "黄泉阁 炼狱",
+      "variableName": "instance_zeguo_hqg_hell",
+      "sortOrder": 5,
+      "nodes": [
+        {
+          "id": "hqg_15",
+          "label": "终点",
+          "row": 0,
+          "columnSlot": 3,
+          "type": "destination",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_14",
+          "label": "首领",
+          "row": 1,
+          "columnSlot": 3,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_13",
+          "label": "精英",
+          "row": 2,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_11",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_12",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_8",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_shuidenglong",
+              "count": 12
+            }
+          ]
+        },
+        {
+          "id": "hqg_9",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_dujiaoxian",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hqg_10",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_shuidenglong",
+              "count": 12
+            }
+          ]
+        },
+        {
+          "id": "hqg_4",
+          "label": "精英",
+          "row": 5,
+          "columnSlot": 1,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_yanmu",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_zeguo_dujiaoxian",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hqg_5",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 2,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_6",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 4,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_7",
+          "label": "精英",
+          "row": 5,
+          "columnSlot": 5,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_dujiaoxian",
+              "count": 9
+            }
+          ]
+        },
+        {
+          "id": "hqg_2",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_beikejing",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_zeguo_hetong",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hqg_3",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_qiaojia",
+              "count": 3
+            },
+            {
+              "monsterVariableName": "monster_zeguo_shuidenglong",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "hqg_1",
+          "label": "起始营地",
+          "row": 7,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        }
+      ],
+      "routes": [
+        {
+          "fromId": "hqg_1",
+          "toId": "hqg_2"
+        },
+        {
+          "fromId": "hqg_1",
+          "toId": "hqg_3"
+        },
+        {
+          "fromId": "hqg_2",
+          "toId": "hqg_4"
+        },
+        {
+          "fromId": "hqg_2",
+          "toId": "hqg_5"
+        },
+        {
+          "fromId": "hqg_3",
+          "toId": "hqg_6"
+        },
+        {
+          "fromId": "hqg_3",
+          "toId": "hqg_7"
+        },
+        {
+          "fromId": "hqg_4",
+          "toId": "hqg_8"
+        },
+        {
+          "fromId": "hqg_5",
+          "toId": "hqg_8"
+        },
+        {
+          "fromId": "hqg_5",
+          "toId": "hqg_9"
+        },
+        {
+          "fromId": "hqg_6",
+          "toId": "hqg_9"
+        },
+        {
+          "fromId": "hqg_6",
+          "toId": "hqg_10"
+        },
+        {
+          "fromId": "hqg_7",
+          "toId": "hqg_10"
+        },
+        {
+          "fromId": "hqg_8",
+          "toId": "hqg_11"
+        },
+        {
+          "fromId": "hqg_9",
+          "toId": "hqg_11"
+        },
+        {
+          "fromId": "hqg_9",
+          "toId": "hqg_12"
+        },
+        {
+          "fromId": "hqg_10",
+          "toId": "hqg_12"
+        },
+        {
+          "fromId": "hqg_11",
+          "toId": "hqg_13"
+        },
+        {
+          "fromId": "hqg_12",
+          "toId": "hqg_13"
+        },
+        {
+          "fromId": "hqg_13",
+          "toId": "hqg_14"
+        },
+        {
+          "fromId": "hqg_14",
+          "toId": "hqg_15"
+        }
+      ]
+    },
+    {
+      "name": "黄泉阁 普通/困难",
+      "variableName": "instance_zeguo_hqg_nh",
+      "sortOrder": 5,
+      "nodes": [
+        {
+          "id": "hqg_15",
+          "label": "终点",
+          "row": 0,
+          "columnSlot": 3,
+          "type": "destination",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_14",
+          "label": "首领",
+          "row": 1,
+          "columnSlot": 3,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_13",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_11",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_12",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_8",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_shuidenglong",
+              "count": 12
+            }
+          ]
+        },
+        {
+          "id": "hqg_9",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_10",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_dujiaoxian",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hqg_4",
+          "label": "精英",
+          "row": 5,
+          "columnSlot": 1,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_yanmu",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_zeguo_dujiaoxian",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hqg_5",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 2,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_6",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 4,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_7",
+          "label": "杂兵",
+          "row": 5,
+          "columnSlot": 5,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_chaolangtoushou",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_zeguo_chaolangdashou",
+              "count": 15
+            }
+          ]
+        },
+        {
+          "id": "hqg_2",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_beikejing",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_zeguo_hetong",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hqg_3",
+          "label": "杂兵",
+          "row": 6,
+          "columnSlot": 4,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_qiaojia",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_zeguo_shuidenglong",
+              "count": 9
+            }
+          ]
+        },
+        {
+          "id": "hqg_1",
+          "label": "起始营地",
+          "row": 7,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        }
+      ],
+      "routes": [
+        {
+          "fromId": "hqg_1",
+          "toId": "hqg_2"
+        },
+        {
+          "fromId": "hqg_1",
+          "toId": "hqg_3"
+        },
+        {
+          "fromId": "hqg_2",
+          "toId": "hqg_4"
+        },
+        {
+          "fromId": "hqg_2",
+          "toId": "hqg_5"
+        },
+        {
+          "fromId": "hqg_3",
+          "toId": "hqg_6"
+        },
+        {
+          "fromId": "hqg_3",
+          "toId": "hqg_7"
+        },
+        {
+          "fromId": "hqg_4",
+          "toId": "hqg_8"
+        },
+        {
+          "fromId": "hqg_5",
+          "toId": "hqg_8"
+        },
+        {
+          "fromId": "hqg_5",
+          "toId": "hqg_9"
+        },
+        {
+          "fromId": "hqg_6",
+          "toId": "hqg_9"
+        },
+        {
+          "fromId": "hqg_6",
+          "toId": "hqg_10"
+        },
+        {
+          "fromId": "hqg_7",
+          "toId": "hqg_10"
+        },
+        {
+          "fromId": "hqg_8",
+          "toId": "hqg_11"
+        },
+        {
+          "fromId": "hqg_9",
+          "toId": "hqg_11"
+        },
+        {
+          "fromId": "hqg_9",
+          "toId": "hqg_12"
+        },
+        {
+          "fromId": "hqg_10",
+          "toId": "hqg_12"
+        },
+        {
+          "fromId": "hqg_11",
+          "toId": "hqg_13"
+        },
+        {
+          "fromId": "hqg_12",
+          "toId": "hqg_13"
+        },
+        {
+          "fromId": "hqg_13",
+          "toId": "hqg_14"
+        },
+        {
+          "fromId": "hqg_14",
+          "toId": "hqg_15"
+        }
+      ]
+    },
+    {
+      "name": "黄泉阁 噩梦",
+      "variableName": "instance_zeguo_hqg_nightmare",
+      "sortOrder": 5,
+      "nodes": [
+        {
+          "id": "hqg_15",
+          "label": "终点",
+          "row": 0,
+          "columnSlot": 3,
+          "type": "destination",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_14",
+          "label": "首领",
+          "row": 1,
+          "columnSlot": 3,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_13",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_11",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_12",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_8",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_shuidenglong",
+              "count": 12
+            }
+          ]
+        },
+        {
+          "id": "hqg_9",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_10",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_dujiaoxian",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hqg_4",
+          "label": "精英",
+          "row": 5,
+          "columnSlot": 1,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_yanmu",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_zeguo_dujiaoxian",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hqg_5",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 2,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_6",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 4,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "hqg_7",
+          "label": "精英",
+          "row": 5,
+          "columnSlot": 5,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_dujiaoxian",
+              "count": 9
+            }
+          ]
+        },
+        {
+          "id": "hqg_2",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_beikejing",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_zeguo_hetong",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "hqg_3",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_zeguo_qiaojia",
+              "count": 3
+            },
+            {
+              "monsterVariableName": "monster_zeguo_shuidenglong",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "hqg_1",
+          "label": "起始营地",
+          "row": 7,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        }
+      ],
+      "routes": [
+        {
+          "fromId": "hqg_1",
+          "toId": "hqg_2"
+        },
+        {
+          "fromId": "hqg_1",
+          "toId": "hqg_3"
+        },
+        {
+          "fromId": "hqg_2",
+          "toId": "hqg_4"
+        },
+        {
+          "fromId": "hqg_2",
+          "toId": "hqg_5"
+        },
+        {
+          "fromId": "hqg_3",
+          "toId": "hqg_6"
+        },
+        {
+          "fromId": "hqg_3",
+          "toId": "hqg_7"
+        },
+        {
+          "fromId": "hqg_4",
+          "toId": "hqg_8"
+        },
+        {
+          "fromId": "hqg_5",
+          "toId": "hqg_8"
+        },
+        {
+          "fromId": "hqg_5",
+          "toId": "hqg_9"
+        },
+        {
+          "fromId": "hqg_6",
+          "toId": "hqg_9"
+        },
+        {
+          "fromId": "hqg_6",
+          "toId": "hqg_10"
+        },
+        {
+          "fromId": "hqg_7",
+          "toId": "hqg_10"
+        },
+        {
+          "fromId": "hqg_8",
+          "toId": "hqg_11"
+        },
+        {
+          "fromId": "hqg_9",
+          "toId": "hqg_11"
+        },
+        {
+          "fromId": "hqg_9",
+          "toId": "hqg_12"
+        },
+        {
+          "fromId": "hqg_10",
+          "toId": "hqg_12"
+        },
+        {
+          "fromId": "hqg_11",
+          "toId": "hqg_13"
+        },
+        {
+          "fromId": "hqg_12",
+          "toId": "hqg_13"
+        },
+        {
+          "fromId": "hqg_13",
+          "toId": "hqg_14"
+        },
+        {
+          "fromId": "hqg_14",
+          "toId": "hqg_15"
+        }
+      ]
+    },
+    {
+      "name": "封魔峡 普通/困难",
+      "variableName": "instance_longguo_fmx_nh",
+      "sortOrder": 6,
+      "routes": [
+        {
+          "fromId": "fmx_1",
+          "toId": "fmx_2"
+        },
+        {
+          "fromId": "fmx_1",
+          "toId": "fmx_3"
+        },
+        {
+          "fromId": "fmx_2",
+          "toId": "fmx_4"
+        },
+        {
+          "fromId": "fmx_3",
+          "toId": "fmx_5"
+        },
+        {
+          "fromId": "fmx_3",
+          "toId": "fmx_6"
+        },
+        {
+          "fromId": "fmx_4",
+          "toId": "fmx_7"
+        },
+        {
+          "fromId": "fmx_5",
+          "toId": "fmx_8"
+        },
+        {
+          "fromId": "fmx_6",
+          "toId": "fmx_8"
+        },
+        {
+          "fromId": "fmx_7",
+          "toId": "fmx_9"
+        },
+        {
+          "fromId": "fmx_7",
+          "toId": "fmx_10"
+        },
+        {
+          "fromId": "fmx_8",
+          "toId": "fmx_10"
+        },
+        {
+          "fromId": "fmx_8",
+          "toId": "fmx_11"
+        },
+        {
+          "fromId": "fmx_9",
+          "toId": "fmx_12"
+        },
+        {
+          "fromId": "fmx_10",
+          "toId": "fmx_12"
+        },
+        {
+          "fromId": "fmx_10",
+          "toId": "fmx_13"
+        },
+        {
+          "fromId": "fmx_10",
+          "toId": "fmx_14"
+        },
+        {
+          "fromId": "fmx_11",
+          "toId": "fmx_14"
+        },
+        {
+          "fromId": "fmx_12",
+          "toId": "fmx_15"
+        },
+        {
+          "fromId": "fmx_13",
+          "toId": "fmx_15"
+        },
+        {
+          "fromId": "fmx_14",
+          "toId": "fmx_15"
+        },
+        {
+          "fromId": "fmx_15",
+          "toId": "fmx_16"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "fmx_16",
+          "label": "终点",
+          "row": 0,
+          "columnSlot": 3,
+          "type": "destination",
+          "monsterSpawns": []
+        },
+        {
+          "id": "fmx_15",
+          "label": "首领",
+          "row": 1,
+          "columnSlot": 3,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "fmx_12",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 2,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "fmx_13",
+          "label": "精英",
+          "row": 2,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_huoshu",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_longguo_huoyunao",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "fmx_14",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 4,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "fmx_9",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 1,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_huoshu",
+              "count": 3
+            },
+            {
+              "monsterVariableName": "monster_longguo_huoyunao",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "fmx_10",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_chuanyunjia",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "fmx_11",
+          "label": "杂兵",
+          "row": 3,
+          "columnSlot": 5,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_chuanyunjia",
+              "count": 15
+            },
+            {
+              "monsterVariableName": "monster_longguo_xiaoqingshe",
+              "count": 9
+            }
+          ]
+        },
+        {
+          "id": "fmx_7",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 2,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "fmx_8",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 4,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "fmx_4",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 2,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "fmx_5",
+          "label": "精英",
+          "row": 5,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_linglangdunbing",
+              "count": 3
+            },
+            {
+              "monsterVariableName": "monster_longguo_linglangshaobing",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "fmx_6",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 4,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "fmx_2",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_chuanyunjia",
+              "count": 3
+            },
+            {
+              "monsterVariableName": "monster_longguo_xiaoqingshe",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "fmx_3",
+          "label": "杂兵",
+          "row": 6,
+          "columnSlot": 4,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_huoshu",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_longguo_huoyunao",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "fmx_1",
+          "label": "起始营地",
+          "row": 7,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        }
+      ]
+    },
+    {
+      "name": "将军陵 普通/困难",
+      "variableName": "instance_longguo_jjl_nh",
+      "sortOrder": 7,
+      "routes": [
+        {
+          "fromId": "jjl_1",
+          "toId": "jjl_2"
+        },
+        {
+          "fromId": "jjl_1",
+          "toId": "jjl_3"
+        },
+        {
+          "fromId": "jjl_2",
+          "toId": "jjl_4"
+        },
+        {
+          "fromId": "jjl_2",
+          "toId": "jjl_5"
+        },
+        {
+          "fromId": "jjl_3",
+          "toId": "jjl_5"
+        },
+        {
+          "fromId": "jjl_4",
+          "toId": "jjl_6"
+        },
+        {
+          "fromId": "jjl_5",
+          "toId": "jjl_6"
+        },
+        {
+          "fromId": "jjl_5",
+          "toId": "jjl_7"
+        },
+        {
+          "fromId": "jjl_6",
+          "toId": "jjl_8"
+        },
+        {
+          "fromId": "jjl_6",
+          "toId": "jjl_9"
+        },
+        {
+          "fromId": "jjl_7",
+          "toId": "jjl_9"
+        },
+        {
+          "fromId": "jjl_8",
+          "toId": "jjl_10"
+        },
+        {
+          "fromId": "jjl_8",
+          "toId": "jjl_11"
+        },
+        {
+          "fromId": "jjl_9",
+          "toId": "jjl_11"
+        },
+        {
+          "fromId": "jjl_9",
+          "toId": "jjl_12"
+        },
+        {
+          "fromId": "jjl_10",
+          "toId": "jjl_13"
+        },
+        {
+          "fromId": "jjl_11",
+          "toId": "jjl_13"
+        },
+        {
+          "fromId": "jjl_12",
+          "toId": "jjl_13"
+        },
+        {
+          "fromId": "jjl_13",
+          "toId": "jjl_14"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "jjl_14",
+          "label": "终点",
+          "row": 0,
+          "columnSlot": 3,
+          "type": "destination",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_13",
+          "label": "首领",
+          "row": 1,
+          "columnSlot": 3,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_10",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 2,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_11",
+          "label": "精英",
+          "row": 2,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_suanni",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_longguo_qingtongjing",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "jjl_12",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 4,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_8",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_qingtonglu",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jjl_9",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_ruyachenshi",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jjl_6",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_7",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_chenou",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_longguo_ruyachenshi",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jjl_4",
+          "label": "精英",
+          "row": 5,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_suanni",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_longguo_qingtongjing",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jjl_5",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 3,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_2",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_qingtongmian",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_longguo_qingtonglu",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jjl_3",
+          "label": "杂兵",
+          "row": 6,
+          "columnSlot": 4,
+          "type": "creep",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_ruyachenshi",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_longguo_chenou",
+              "count": 12
+            }
+          ]
+        },
+        {
+          "id": "jjl_1",
+          "label": "起始营地",
+          "row": 7,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        }
+      ]
+    },
+    {
+      "name": "将军陵 噩梦",
+      "variableName": "instance_longguo_jjl_nightmare",
+      "sortOrder": 7,
+      "routes": [
+        {
+          "fromId": "jjl_1",
+          "toId": "jjl_2"
+        },
+        {
+          "fromId": "jjl_1",
+          "toId": "jjl_3"
+        },
+        {
+          "fromId": "jjl_2",
+          "toId": "jjl_4"
+        },
+        {
+          "fromId": "jjl_2",
+          "toId": "jjl_5"
+        },
+        {
+          "fromId": "jjl_3",
+          "toId": "jjl_5"
+        },
+        {
+          "fromId": "jjl_4",
+          "toId": "jjl_6"
+        },
+        {
+          "fromId": "jjl_5",
+          "toId": "jjl_6"
+        },
+        {
+          "fromId": "jjl_5",
+          "toId": "jjl_7"
+        },
+        {
+          "fromId": "jjl_6",
+          "toId": "jjl_8"
+        },
+        {
+          "fromId": "jjl_6",
+          "toId": "jjl_9"
+        },
+        {
+          "fromId": "jjl_7",
+          "toId": "jjl_9"
+        },
+        {
+          "fromId": "jjl_8",
+          "toId": "jjl_10"
+        },
+        {
+          "fromId": "jjl_8",
+          "toId": "jjl_11"
+        },
+        {
+          "fromId": "jjl_9",
+          "toId": "jjl_11"
+        },
+        {
+          "fromId": "jjl_9",
+          "toId": "jjl_12"
+        },
+        {
+          "fromId": "jjl_10",
+          "toId": "jjl_13"
+        },
+        {
+          "fromId": "jjl_11",
+          "toId": "jjl_13"
+        },
+        {
+          "fromId": "jjl_12",
+          "toId": "jjl_13"
+        },
+        {
+          "fromId": "jjl_13",
+          "toId": "jjl_14"
+        }
+      ],
+      "nodes": [
+        {
+          "id": "jjl_14",
+          "label": "终点",
+          "row": 0,
+          "columnSlot": 3,
+          "type": "destination",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_13",
+          "label": "首领",
+          "row": 1,
+          "columnSlot": 3,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_10",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 2,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_11",
+          "label": "精英",
+          "row": 2,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_suanni",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_longguo_qingtongjing",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "jjl_12",
+          "label": "营地",
+          "row": 2,
+          "columnSlot": 4,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_8",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_qingtonglu",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jjl_9",
+          "label": "精英",
+          "row": 3,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_ruyachenshi",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jjl_6",
+          "label": "营地",
+          "row": 4,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_7",
+          "label": "精英",
+          "row": 4,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_chenou",
+              "count": 9
+            },
+            {
+              "monsterVariableName": "monster_longguo_ruyachenshi",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jjl_4",
+          "label": "精英",
+          "row": 5,
+          "columnSlot": 2,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_suanni",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_longguo_qingtongjing",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jjl_5",
+          "label": "首领",
+          "row": 5,
+          "columnSlot": 3,
+          "type": "boss",
+          "monsterSpawns": []
+        },
+        {
+          "id": "jjl_2",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 3,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_qingtongmian",
+              "count": 6
+            },
+            {
+              "monsterVariableName": "monster_longguo_qingtonglu",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "id": "jjl_3",
+          "label": "精英",
+          "row": 6,
+          "columnSlot": 4,
+          "type": "elite",
+          "monsterSpawns": [
+            {
+              "monsterVariableName": "monster_longguo_ruyachenshi",
+              "count": 3
+            },
+            {
+              "monsterVariableName": "monster_longguo_chenou",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "id": "jjl_1",
+          "label": "起始营地",
+          "row": 7,
+          "columnSlot": 3,
+          "type": "camp",
+          "monsterSpawns": []
+        }
+      ]
+    }
+  ]
+}

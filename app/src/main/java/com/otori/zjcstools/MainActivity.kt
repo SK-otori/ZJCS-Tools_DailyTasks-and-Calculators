@@ -565,7 +565,7 @@ fun App() {
                 onAttributeCalculatorClick = { navigateTo("tools_attribute_morning_star") },
                 onAstralKamiCalculatorClick = { navigateTo("tools_astral_kami") },
                 onAssaultArmorBreakCalculatorClick = { navigateTo("tools_assault_armor_break") },
-                onCommissionMonsterLookupClick = { navigateTo("tools_commission_monster_lookup") },
+                onDailyMissionMonsterLookupClick = { navigateTo("tools_daily_mission_monster_lookup") },
                 onBack = { goBack() }
             )
 
@@ -585,11 +585,16 @@ fun App() {
                 onBack = { goBack() }
             )
 
-            "tools_commission_monster_lookup" -> CommissionMonsterLookupScreen(
+            "tools_daily_mission_monster_lookup" -> DailyMissionMonsterLookupScreen(
                 onBack = { goBack() }
             )
 
             "game_data_home" -> GameDataHomeScreen(
+                onDungeonInfoClick = { navigateTo("game_dungeon_info") },
+                onBack = { goBack() }
+            )
+
+            "game_dungeon_info" -> DungeonInfoScreen(
                 onBack = { goBack() }
             )
 
@@ -941,7 +946,7 @@ fun ToolsHomeScreen(
     onAttributeCalculatorClick: () -> Unit,
     onAstralKamiCalculatorClick: () -> Unit,
     onAssaultArmorBreakCalculatorClick: () -> Unit,
-    onCommissionMonsterLookupClick: () -> Unit,
+    onDailyMissionMonsterLookupClick: () -> Unit,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
@@ -960,7 +965,7 @@ fun ToolsHomeScreen(
         HomeCardButton(
             title = "每日委托怪物搜索",
             subtitle = "查找每日委托所需怪物在副本内的位置",
-            onClick = onCommissionMonsterLookupClick
+            onClick = onDailyMissionMonsterLookupClick
         )
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -993,13 +998,20 @@ fun ToolsHomeScreen(
 
 @Composable
 fun GameDataHomeScreen(
+    onDungeonInfoClick: () -> Unit,
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
         title = "游戏数据",
         subtitle = "整理和查看游戏相关数据",
         onBack = onBack
-    )
+    ) {
+        HomeCardButton(
+            title = "副本资料",
+            subtitle = "查看副本地图和资料",
+            onClick = onDungeonInfoClick
+        )
+    }
 }
 
 

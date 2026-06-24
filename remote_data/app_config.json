@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "appUpdate": {
+    "enabled": true,
+    "versionCode": 10,
+    "versionName": "2.4.1",
+    "apkUrl": "https://gitee.com/evilian/ZJCS-Tools_DailyTasks-and-Calculators/releases/download/v2.4.1/zjcsTools-v2.4.1-release.apk",
+    "forceUpdate": false,
+    "title": "发现新版本",
+    "message": "检测到杖剑小助手有新版本可用。",
+    "releaseNotes": [
+      "新增每日委托怪物搜索",
+      "新增副本资料与副本路线地图",
+      "应用更名为杖剑小助手"
+    ]
+  },
+  "dataFiles": {
+    "exchangeCodes": {
+      "version": 2,
+      "url": "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/DHM_codes.json"
+    },
+    "updatePreviewNotices": {
+      "version": 1,
+      "url": "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/XQF_Announcements.json"
+    },
+    "officialNotices": {
+      "version": 2,
+      "url": "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/ZSF_Announcements.json"
+    },
+    "dungeonDetails": {
+      "version": 10,
+      "url": "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/dungeon_details.json"
+    },
+    "monsterDetails": {
+      "version": 1,
+      "url": "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/monster_details.json"
+    }
+  }
+}

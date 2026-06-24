@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -29,9 +30,12 @@ const val REMOTE_OFFICIAL_NOTICE_URL =
     "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/ZSF_Announcements.json"
 const val REMOTE_APP_UPDATE_URL =
     "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/app_update.json"
+const val REMOTE_APP_CONFIG_URL =
+    "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/app_config.json"
 const val BUNDLED_EXCHANGE_CODES_FILE = "DHM_codes.json"
 const val BUNDLED_UPDATE_PREVIEW_FILE = "XQF_Announcements.json"
 const val BUNDLED_OFFICIAL_NOTICE_FILE = "ZSF_Announcements.json"
+const val BUNDLED_APP_CONFIG_FILE = "app_config.json"
 
 data class UpdatePreviewNotice(
     val id: String,
@@ -57,6 +61,16 @@ data class AppUpdateInfo(
     val forceUpdate: Boolean
 )
 
+data class RemoteDataFileConfig(
+    val url: String,
+    val version: Int
+)
+
+data class RemoteAppConfig(
+    val appUpdate: AppUpdateInfo?,
+    val dataFiles: Map<String, RemoteDataFileConfig>
+)
+
 fun ExchangeCodeNotice.isLongTerm(): Boolean {
     return endDate.year >= 2099
 }
@@ -66,6 +80,14 @@ const val MENU_HIDDEN_EXCHANGE_CODES_KEY = "menu_hidden_exchange_codes"
 const val CACHED_EXCHANGE_CODES_JSON_KEY = "cached_exchange_codes_json"
 const val CACHED_UPDATE_PREVIEW_JSON_KEY = "cached_update_preview_json"
 const val CACHED_OFFICIAL_NOTICE_JSON_KEY = "cached_official_notice_json"
+const val CACHED_EXCHANGE_CODES_VERSION_KEY = "cached_exchange_codes_version"
+const val CACHED_UPDATE_PREVIEW_VERSION_KEY = "cached_update_preview_version"
+const val CACHED_OFFICIAL_NOTICE_VERSION_KEY = "cached_official_notice_version"
+const val REMOTE_DATA_EXCHANGE_CODES_KEY = "exchangeCodes"
+const val REMOTE_DATA_UPDATE_PREVIEW_KEY = "updatePreviewNotices"
+const val REMOTE_DATA_OFFICIAL_NOTICES_KEY = "officialNotices"
+const val REMOTE_DATA_DUNGEON_DETAILS_KEY = "dungeonDetails"
+const val REMOTE_DATA_MONSTER_DETAILS_KEY = "monsterDetails"
 
 class RemoteFileUnavailableException(message: String) : Exception(message)
 
@@ -204,6 +226,35 @@ fun parseAppUpdateInfo(rawJson: String): AppUpdateInfo? {
     }.getOrNull()
 }
 
+fun parseAppUpdateInfo(root: JSONObject): AppUpdateInfo? {
+    return parseAppUpdateInfo(root.toString())
+}
+
+fun parseRemoteAppConfig(rawJson: String): RemoteAppConfig? {
+    return runCatching {
+        val root = JSONObject(rawJson.trim())
+        val appUpdate = root.optJSONObject("appUpdate")
+            ?.let(::parseAppUpdateInfo)
+            ?: root.optJSONObject("apkUpdate")?.let(::parseAppUpdateInfo)
+
+        val dataFilesObject = root.optJSONObject("dataFiles") ?: JSONObject()
+        val dataFiles = buildMap {
+            val keys = dataFilesObject.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val item = dataFilesObject.optJSONObject(key) ?: continue
+                val url = item.firstText("url", "downloadUrl").orEmpty()
+                val version = item.optInt("version", 0)
+                if (url.isNotBlank() && version > 0) {
+                    put(key, RemoteDataFileConfig(url = url, version = version))
+                }
+            }
+        }
+
+        RemoteAppConfig(appUpdate = appUpdate, dataFiles = dataFiles)
+    }.getOrNull()
+}
+
 suspend fun downloadText(url: String): String = withContext(Dispatchers.IO) {
     val connection = (URL(url).openConnection() as HttpURLConnection).apply {
         connectTimeout = 8000
@@ -235,17 +286,48 @@ fun currentAppVersionCode(context: Context): Long {
 
 suspend fun fetchAppUpdateInfo(context: Context): AppUpdateInfo? {
     return runCatching {
-        val remoteInfo = downloadText(REMOTE_APP_UPDATE_URL)
-            .let(::parseAppUpdateInfo)
+        val remoteInfo = fetchRemoteAppConfig()
+            ?.appUpdate
+            ?: downloadText(REMOTE_APP_UPDATE_URL).let(::parseAppUpdateInfo)
             ?: return@runCatching null
 
         remoteInfo.takeIf { it.versionCode > currentAppVersionCode(context) }
     }.getOrNull()
 }
 
+suspend fun fetchRemoteAppConfig(): RemoteAppConfig? {
+    return runCatching {
+        downloadText(REMOTE_APP_CONFIG_URL).let(::parseRemoteAppConfig)
+    }.getOrNull()
+}
+
+fun loadBundledAppConfig(context: Context): RemoteAppConfig? {
+    return readBundledJson(context, BUNDLED_APP_CONFIG_FILE)
+        ?.let(::parseRemoteAppConfig)
+}
+
+suspend fun remoteDataFileConfig(
+    context: Context,
+    key: String,
+    fallbackUrl: String
+): RemoteDataFileConfig {
+    return fetchRemoteAppConfig()
+        ?.dataFiles
+        ?.get(key)
+        ?: loadBundledAppConfig(context)
+            ?.dataFiles
+            ?.get(key)
+        ?: RemoteDataFileConfig(url = fallbackUrl, version = 0)
+}
+
 fun loadCachedExchangeCodeNotices(context: Context): List<ExchangeCodeNotice> {
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
-    val cachedJson = prefs.getString(CACHED_EXCHANGE_CODES_JSON_KEY, null)
+    val localJson = readLocalRemoteJson(context, BUNDLED_EXCHANGE_CODES_FILE)
+    val legacyCachedJson = prefs.getString(CACHED_EXCHANGE_CODES_JSON_KEY, null)
+    if (localJson.isNullOrBlank() && !legacyCachedJson.isNullOrBlank()) {
+        writeLocalRemoteJson(context, BUNDLED_EXCHANGE_CODES_FILE, legacyCachedJson)
+    }
+    val cachedJson = localJson ?: legacyCachedJson
 
     return cachedJson
         ?.let(::parseExchangeCodeNotices)
@@ -277,9 +359,28 @@ fun readBundledJson(context: Context, fileName: String): String? {
     }.getOrNull()
 }
 
+fun readLocalRemoteJson(context: Context, fileName: String): String? {
+    return runCatching {
+        File(context.filesDir, fileName)
+            .takeIf { it.exists() && it.isFile }
+            ?.readText(Charsets.UTF_8)
+    }.getOrNull()
+}
+
+fun writeLocalRemoteJson(context: Context, fileName: String, rawJson: String) {
+    runCatching {
+        File(context.filesDir, fileName).writeText(rawJson, Charsets.UTF_8)
+    }
+}
+
 fun loadCachedUpdatePreviewNotices(context: Context): List<UpdatePreviewNotice> {
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
-    val cachedJson = prefs.getString(CACHED_UPDATE_PREVIEW_JSON_KEY, null)
+    val localJson = readLocalRemoteJson(context, BUNDLED_UPDATE_PREVIEW_FILE)
+    val legacyCachedJson = prefs.getString(CACHED_UPDATE_PREVIEW_JSON_KEY, null)
+    if (localJson.isNullOrBlank() && !legacyCachedJson.isNullOrBlank()) {
+        writeLocalRemoteJson(context, BUNDLED_UPDATE_PREVIEW_FILE, legacyCachedJson)
+    }
+    val cachedJson = localJson ?: legacyCachedJson
 
     return cachedJson
         ?.let(::parseUpdatePreviewNotices)
@@ -290,7 +391,12 @@ fun loadCachedUpdatePreviewNotices(context: Context): List<UpdatePreviewNotice> 
 
 fun loadCachedOfficialNotices(context: Context): List<UpdatePreviewNotice> {
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
-    val cachedJson = prefs.getString(CACHED_OFFICIAL_NOTICE_JSON_KEY, null)
+    val localJson = readLocalRemoteJson(context, BUNDLED_OFFICIAL_NOTICE_FILE)
+    val legacyCachedJson = prefs.getString(CACHED_OFFICIAL_NOTICE_JSON_KEY, null)
+    if (localJson.isNullOrBlank() && !legacyCachedJson.isNullOrBlank()) {
+        writeLocalRemoteJson(context, BUNDLED_OFFICIAL_NOTICE_FILE, legacyCachedJson)
+    }
+    val cachedJson = localJson ?: legacyCachedJson
 
     return cachedJson
         ?.let(::parseUpdatePreviewNotices)
@@ -302,11 +408,20 @@ suspend fun loadRemoteExchangeCodeNotices(context: Context): List<ExchangeCodeNo
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
 
     return runCatching {
-        val rawJson = downloadText(REMOTE_EXCHANGE_CODES_URL)
+        val config = remoteDataFileConfig(context, REMOTE_DATA_EXCHANGE_CODES_KEY, REMOTE_EXCHANGE_CODES_URL)
+        if (config.version > 0 &&
+            prefs.getInt(CACHED_EXCHANGE_CODES_VERSION_KEY, 0) >= config.version
+        ) {
+            return@runCatching loadCachedExchangeCodeNotices(context)
+        }
+
+        val rawJson = downloadText(config.url)
         val notices = parseExchangeCodeNotices(rawJson)
         if (notices.isNotEmpty()) {
+            writeLocalRemoteJson(context, BUNDLED_EXCHANGE_CODES_FILE, rawJson)
             prefs.edit(commit = true) {
                 putString(CACHED_EXCHANGE_CODES_JSON_KEY, rawJson)
+                putInt(CACHED_EXCHANGE_CODES_VERSION_KEY, config.version)
             }
             notices
         } else {
@@ -321,15 +436,24 @@ suspend fun fetchRemoteExchangeCodeNoticesStrict(context: Context): Result<List<
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
 
     return runCatching {
-        val rawJson = downloadText(REMOTE_EXCHANGE_CODES_URL)
+        val config = remoteDataFileConfig(context, REMOTE_DATA_EXCHANGE_CODES_KEY, REMOTE_EXCHANGE_CODES_URL)
+        if (config.version > 0 &&
+            prefs.getInt(CACHED_EXCHANGE_CODES_VERSION_KEY, 0) >= config.version
+        ) {
+            return@runCatching loadCachedExchangeCodeNotices(context)
+        }
+
+        val rawJson = downloadText(config.url)
         val notices = parseExchangeCodeNotices(rawJson)
 
         if (notices.isEmpty()) {
             throw RemoteFileUnavailableException("Empty exchange code data")
         }
 
+        writeLocalRemoteJson(context, BUNDLED_EXCHANGE_CODES_FILE, rawJson)
         prefs.edit(commit = true) {
             putString(CACHED_EXCHANGE_CODES_JSON_KEY, rawJson)
+            putInt(CACHED_EXCHANGE_CODES_VERSION_KEY, config.version)
         }
 
         notices
@@ -340,11 +464,20 @@ suspend fun loadRemoteUpdatePreviewNotices(context: Context): List<UpdatePreview
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
 
     return runCatching {
-        val rawJson = downloadText(REMOTE_UPDATE_PREVIEW_URL)
+        val config = remoteDataFileConfig(context, REMOTE_DATA_UPDATE_PREVIEW_KEY, REMOTE_UPDATE_PREVIEW_URL)
+        if (config.version > 0 &&
+            prefs.getInt(CACHED_UPDATE_PREVIEW_VERSION_KEY, 0) >= config.version
+        ) {
+            return@runCatching loadCachedUpdatePreviewNotices(context)
+        }
+
+        val rawJson = downloadText(config.url)
         val notices = parseUpdatePreviewNotices(rawJson)
         if (notices.isNotEmpty()) {
+            writeLocalRemoteJson(context, BUNDLED_UPDATE_PREVIEW_FILE, rawJson)
             prefs.edit(commit = true) {
                 putString(CACHED_UPDATE_PREVIEW_JSON_KEY, rawJson)
+                putInt(CACHED_UPDATE_PREVIEW_VERSION_KEY, config.version)
             }
             notices
         } else {
@@ -359,10 +492,19 @@ suspend fun loadRemoteOfficialNotices(context: Context): List<UpdatePreviewNotic
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
 
     return runCatching {
-        val rawJson = downloadText(REMOTE_OFFICIAL_NOTICE_URL)
+        val config = remoteDataFileConfig(context, REMOTE_DATA_OFFICIAL_NOTICES_KEY, REMOTE_OFFICIAL_NOTICE_URL)
+        if (config.version > 0 &&
+            prefs.getInt(CACHED_OFFICIAL_NOTICE_VERSION_KEY, 0) >= config.version
+        ) {
+            return@runCatching loadCachedOfficialNotices(context)
+        }
+
+        val rawJson = downloadText(config.url)
         val notices = parseUpdatePreviewNotices(rawJson)
+        writeLocalRemoteJson(context, BUNDLED_OFFICIAL_NOTICE_FILE, rawJson)
         prefs.edit(commit = true) {
             putString(CACHED_OFFICIAL_NOTICE_JSON_KEY, rawJson)
+            putInt(CACHED_OFFICIAL_NOTICE_VERSION_KEY, config.version)
         }
         notices
     }.getOrElse {
@@ -374,15 +516,24 @@ suspend fun fetchRemoteUpdatePreviewNoticesStrict(context: Context): Result<List
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
 
     return runCatching {
-        val rawJson = downloadText(REMOTE_UPDATE_PREVIEW_URL)
+        val config = remoteDataFileConfig(context, REMOTE_DATA_UPDATE_PREVIEW_KEY, REMOTE_UPDATE_PREVIEW_URL)
+        if (config.version > 0 &&
+            prefs.getInt(CACHED_UPDATE_PREVIEW_VERSION_KEY, 0) >= config.version
+        ) {
+            return@runCatching loadCachedUpdatePreviewNotices(context)
+        }
+
+        val rawJson = downloadText(config.url)
         val notices = parseUpdatePreviewNotices(rawJson)
 
         if (notices.isEmpty()) {
             throw RemoteFileUnavailableException("Empty update preview data")
         }
 
+        writeLocalRemoteJson(context, BUNDLED_UPDATE_PREVIEW_FILE, rawJson)
         prefs.edit(commit = true) {
             putString(CACHED_UPDATE_PREVIEW_JSON_KEY, rawJson)
+            putInt(CACHED_UPDATE_PREVIEW_VERSION_KEY, config.version)
         }
 
         notices
@@ -393,11 +544,20 @@ suspend fun fetchRemoteOfficialNoticesStrict(context: Context): Result<List<Upda
     val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
 
     return runCatching {
-        val rawJson = downloadText(REMOTE_OFFICIAL_NOTICE_URL)
+        val config = remoteDataFileConfig(context, REMOTE_DATA_OFFICIAL_NOTICES_KEY, REMOTE_OFFICIAL_NOTICE_URL)
+        if (config.version > 0 &&
+            prefs.getInt(CACHED_OFFICIAL_NOTICE_VERSION_KEY, 0) >= config.version
+        ) {
+            return@runCatching loadCachedOfficialNotices(context)
+        }
+
+        val rawJson = downloadText(config.url)
         val notices = parseUpdatePreviewNotices(rawJson)
 
+        writeLocalRemoteJson(context, BUNDLED_OFFICIAL_NOTICE_FILE, rawJson)
         prefs.edit(commit = true) {
             putString(CACHED_OFFICIAL_NOTICE_JSON_KEY, rawJson)
+            putInt(CACHED_OFFICIAL_NOTICE_VERSION_KEY, config.version)
         }
 
         notices

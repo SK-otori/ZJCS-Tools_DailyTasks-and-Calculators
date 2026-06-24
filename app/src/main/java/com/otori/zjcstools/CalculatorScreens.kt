@@ -1,6 +1,9 @@
 ﻿package com.otori.zjcstools
 
 import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -65,9 +68,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.zIndex
 import androidx.core.content.edit
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
 import java.util.Locale
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -233,57 +242,58 @@ private const val ASSAULT_ARMOR_BREAK_DEFENSE_KEY = "assault_armor_break_defense
 private const val ASSAULT_ARMOR_BREAK_FLAT_KEY = "assault_armor_break_flat"
 private const val ASSAULT_ARMOR_BREAK_OPTION_INDEX_KEY = "assault_armor_break_option_index"
 
-data class CommissionDungeonNode(
+data class DailyMissionDungeonNode(
     val id: String,
     val label: String,
     val row: Int,
     val columnSlot: Int,
-    val type: CommissionDungeonNodeType = CommissionDungeonNodeType.Normal,
-    val monsterSpawns: List<CommissionMonsterSpawn> = emptyList()
+    val type: DailyMissionDungeonNodeType = DailyMissionDungeonNodeType.Normal,
+    val monsterSpawns: List<DailyMissionMonsterSpawn> = emptyList()
 )
 
-data class CommissionDungeonRoute(
+data class DailyMissionDungeonRoute(
     val fromId: String,
     val toId: String
 )
 
-data class CommissionMonster(
+data class DailyMissionMonster(
     val displayName: String,
     val variableName: String,
     val pinyinName: String
 )
 
-data class CommissionMonsterSpawn(
+data class DailyMissionMonsterSpawn(
     val monsterVariableName: String,
     val count: Int
 )
 
-data class CommissionMonsterRequirement(
+data class DailyMissionMonsterRequirement(
     val monsterVariableName: String,
     val requiredCount: Int
 )
 
-data class CommissionDungeonMap(
+data class DailyMissionDungeonMap(
     val name: String,
     val variableName: String,
-    val nodes: List<CommissionDungeonNode>,
-    val routes: List<CommissionDungeonRoute>
+    val nodes: List<DailyMissionDungeonNode>,
+    val routes: List<DailyMissionDungeonRoute>,
+    val sortOrder: Int = Int.MAX_VALUE
 )
 
-data class CommissionDungeonRoutePlan(
+data class DailyMissionDungeonRoutePlan(
     val nodePath: List<String>,
     val targetNodeIdsByMonster: Map<String, Set<String>>,
     val matchedCountByMonster: Map<String, Int>
 )
 
-data class CommissionDungeonRouteResult(
+data class DailyMissionDungeonRouteResult(
     val routeKey: String,
-    val dungeonMap: CommissionDungeonMap,
-    val routePlan: CommissionDungeonRoutePlan,
-    val requirements: List<CommissionMonsterRequirement>
+    val dungeonMap: DailyMissionDungeonMap,
+    val routePlan: DailyMissionDungeonRoutePlan,
+    val requirements: List<DailyMissionMonsterRequirement>
 )
 
-enum class CommissionDungeonNodeType {
+enum class DailyMissionDungeonNodeType {
     Normal,
     Creep,
     Elite,
@@ -292,179 +302,745 @@ enum class CommissionDungeonNodeType {
     Destination
 }
 
-private const val COMMISSION_DUNGEON_DIFFICULTY_NORMAL_HARD_SUFFIX = "nh"
-private const val COMMISSION_DUNGEON_DIFFICULTY_NIGHTMARE_SUFFIX = "nightmare"
-private const val COMMISSION_DUNGEON_DIFFICULTY_HELL_SUFFIX = "hell"
-private const val COMMISSION_DUNGEON_DIFFICULTY_ABYSS_SUFFIX = "abyss"
-private const val COMMISSION_DUNGEON_REGION_SENGUO = "senguo"
-private const val COMMISSION_DUNGEON_REGION_SHANGUO = "shanguo"
-private const val COMMISSION_DUNGEON_REGION_ZEGUO = "zeguo"
-private const val COMMISSION_DUNGEON_REGION_LONGGUO = "longguo"
-private const val COMMISSION_DUNGEON_REGION_YUGUO = "yuguo"
-private const val COMMISSION_DUNGEON_REGION_HAPADI = "hapadi"
-private const val COMMISSION_DUNGEON_REGION_YIGENISI = "yigenisi"
-private const val COMMISSION_DUNGEON_INSTANCE_SJZS = "sjzs"
+private const val DAILY_MISSION_DUNGEON_DIFFICULTY_NORMAL_HARD_SUFFIX = "nh"
+private const val DAILY_MISSION_DUNGEON_DIFFICULTY_NIGHTMARE_SUFFIX = "nightmare"
+private const val DAILY_MISSION_DUNGEON_DIFFICULTY_HELL_SUFFIX = "hell"
+private const val DAILY_MISSION_DUNGEON_DIFFICULTY_ABYSS_SUFFIX = "abyss"
+private const val DAILY_MISSION_DUNGEON_REGION_SENGUO = "senguo"
+private const val DAILY_MISSION_DUNGEON_REGION_SHANGUO = "shanguo"
+private const val DAILY_MISSION_DUNGEON_REGION_ZEGUO = "zeguo"
+private const val DAILY_MISSION_DUNGEON_REGION_LONGGUO = "longguo"
+private const val DAILY_MISSION_DUNGEON_REGION_YUGUO = "yuguo"
+private const val DAILY_MISSION_DUNGEON_REGION_HAPADI = "hapadi"
+private const val DAILY_MISSION_DUNGEON_REGION_YIGENISI = "yigenisi"
+private const val DAILY_MISSION_DUNGEON_INSTANCE_SJZS = "sjzs"
+private const val DAILY_MISSION_DUNGEON_INSTANCE_JSS = "jss"
+private const val DAILY_MISSION_DUNGEON_INSTANCE_HZGYJ = "hzgyj"
+private const val DAILY_MISSION_DUNGEON_INSTANCE_YSDS = "ysds"
+private const val DAILY_MISSION_DUNGEON_INSTANCE_HQG = "hqg"
+private const val DAILY_MISSION_DUNGEON_INSTANCE_FMX = "fmx"
+private const val DAILY_MISSION_DUNGEON_INSTANCE_JJL = "jjl"
 
-private val commissionMonsters = listOf(
-    CommissionMonster("野猪", commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "yezhu"), "yezhu"),
-    CommissionMonster("臭弹花", commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "choudanhua"), "choudanhua"),
-    CommissionMonster("森狼打手", commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "senlangdashou"), "senlangdashou"),
-    CommissionMonster("森狼投手", commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "senlangtoushou"), "senlangtoushou"),
-    CommissionMonster("飞镰螳螂", commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "feiliantanglang"), "feiliantanglang"),
-    CommissionMonster("水丝蜘蛛", commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "shuisizhizhu"), "shuisizhizhu")
+private val dailyMissionDungeonRegionNameByCode = mapOf(
+    DAILY_MISSION_DUNGEON_REGION_SENGUO to "森之国",
+    DAILY_MISSION_DUNGEON_REGION_SHANGUO to "山之国",
+    DAILY_MISSION_DUNGEON_REGION_ZEGUO to "泽之国",
+    DAILY_MISSION_DUNGEON_REGION_LONGGUO to "龙之国",
+    DAILY_MISSION_DUNGEON_REGION_YUGUO to "羽之国",
+    DAILY_MISSION_DUNGEON_REGION_HAPADI to "哈帕迪",
+    DAILY_MISSION_DUNGEON_REGION_YIGENISI to "伊格尼斯"
 )
 
-private val commissionMonsterByVariableName = commissionMonsters.associateBy { it.variableName }
-
-private val commissionDungeonRegionNameByCode = mapOf(
-    COMMISSION_DUNGEON_REGION_SENGUO to "森之国",
-    COMMISSION_DUNGEON_REGION_SHANGUO to "山之国",
-    COMMISSION_DUNGEON_REGION_ZEGUO to "泽之国",
-    COMMISSION_DUNGEON_REGION_LONGGUO to "龙之国",
-    COMMISSION_DUNGEON_REGION_YUGUO to "羽之国",
-    COMMISSION_DUNGEON_REGION_HAPADI to "哈帕迪",
-    COMMISSION_DUNGEON_REGION_YIGENISI to "伊格尼斯"
+private val dailyMissionDungeonInstanceNameByCode = mapOf(
+    DAILY_MISSION_DUNGEON_INSTANCE_SJZS to "世界之树",
+    DAILY_MISSION_DUNGEON_INSTANCE_JSS to "机神山",
+    DAILY_MISSION_DUNGEON_INSTANCE_HZGYJ to "海之宫遗迹",
+    DAILY_MISSION_DUNGEON_INSTANCE_YSDS to "源水大社",
+    DAILY_MISSION_DUNGEON_INSTANCE_HQG to "黄泉阁",
+    DAILY_MISSION_DUNGEON_INSTANCE_FMX to "封魔峡",
+    DAILY_MISSION_DUNGEON_INSTANCE_JJL to "将军陵"
 )
 
-private val commissionDungeonInstanceNameByCode = mapOf(
-    COMMISSION_DUNGEON_INSTANCE_SJZS to "世界之树"
+private val dailyMissionDungeonDifficultyNameBySuffix = mapOf(
+    DAILY_MISSION_DUNGEON_DIFFICULTY_NORMAL_HARD_SUFFIX to "普通/困难",
+    DAILY_MISSION_DUNGEON_DIFFICULTY_NIGHTMARE_SUFFIX to "噩梦",
+    DAILY_MISSION_DUNGEON_DIFFICULTY_HELL_SUFFIX to "炼狱",
+    DAILY_MISSION_DUNGEON_DIFFICULTY_ABYSS_SUFFIX to "深渊"
 )
 
-private val commissionDungeonDifficultyNameBySuffix = mapOf(
-    COMMISSION_DUNGEON_DIFFICULTY_NORMAL_HARD_SUFFIX to "普通/困难",
-    COMMISSION_DUNGEON_DIFFICULTY_NIGHTMARE_SUFFIX to "噩梦",
-    COMMISSION_DUNGEON_DIFFICULTY_HELL_SUFFIX to "炼狱",
-    COMMISSION_DUNGEON_DIFFICULTY_ABYSS_SUFFIX to "深渊"
+private const val REMOTE_DAILY_MISSION_DUNGEONS_URL =
+    "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/dungeon_details.json"
+private const val REMOTE_DAILY_MISSION_MONSTERS_URL =
+    "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/monster_details.json"
+private const val BUNDLED_DAILY_MISSION_DUNGEONS_FILE = "dungeon_details.json"
+private const val LOCAL_DAILY_MISSION_DUNGEONS_FILE = "dungeon_details.json"
+private const val CACHED_DAILY_MISSION_DUNGEONS_JSON_KEY = "cached_dungeon_details_json"
+private const val CACHED_DAILY_MISSION_DUNGEONS_VERSION_KEY = "cached_dungeon_details_version"
+private const val LEGACY_CACHED_DAILY_MISSION_DUNGEONS_JSON_KEY = "cached_commission_dungeons_json"
+private const val LEGACY_CACHED_DAILY_MISSION_DUNGEONS_VERSION_KEY = "cached_commission_dungeons_version"
+private const val BUNDLED_DAILY_MISSION_MONSTERS_FILE = "monster_details.json"
+private const val LOCAL_DAILY_MISSION_MONSTERS_FILE = "monster_details.json"
+private const val CACHED_DAILY_MISSION_MONSTERS_JSON_KEY = "cached_monster_details_json"
+private const val CACHED_DAILY_MISSION_MONSTERS_VERSION_KEY = "cached_monster_details_version"
+
+private data class DailyMissionDungeonChoice(
+    val regionCode: String,
+    val instanceCode: String
 )
 
-private val commissionDungeonMaps = listOf(
-    CommissionDungeonMap(
-        name = "世界之树 普通/困难",
-        variableName = "instance_${COMMISSION_DUNGEON_REGION_SENGUO}_${COMMISSION_DUNGEON_INSTANCE_SJZS}_$COMMISSION_DUNGEON_DIFFICULTY_NORMAL_HARD_SUFFIX",
-        nodes = listOf(
-            CommissionDungeonNode(
-                id = "szg_12",
-                label = "终点",
-                row = 0,
-                columnSlot = 3,
-                type = CommissionDungeonNodeType.Destination
-            ),
-            CommissionDungeonNode(
-                id = "szg_11",
-                label = "首领",
-                row = 1,
-                columnSlot = 3,
-                type = CommissionDungeonNodeType.Boss
-            ),
-            CommissionDungeonNode(
-                id = "szg_10",
-                label = "休息点",
-                row = 2,
-                columnSlot = 3,
-                type = CommissionDungeonNodeType.Camp
-            ),
-            CommissionDungeonNode(
-                id = "szg_8",
-                label = "大怪",
-                row = 3,
-                columnSlot = 2,
-                type = CommissionDungeonNodeType.Elite
-            ),
-            CommissionDungeonNode(
-                id = "szg_9",
-                label = "小怪",
-                row = 3,
-                columnSlot = 4,
-                type = CommissionDungeonNodeType.Creep,
-                monsterSpawns = listOf(
-                    CommissionMonsterSpawn(commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "feiliantanglang"), 9),
-                    CommissionMonsterSpawn(commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "shuisizhizhu"), 6)
-                )
-            ),
-            CommissionDungeonNode(
-                id = "szg_6",
-                label = "小怪",
-                row = 4,
-                columnSlot = 2,
-                type = CommissionDungeonNodeType.Creep,
-                monsterSpawns = listOf(
-                    CommissionMonsterSpawn(commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "senlangdashou"), 9),
-                    CommissionMonsterSpawn(commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "senlangtoushou"), 6)
-                )
-            ),
-            CommissionDungeonNode(
-                id = "szg_7",
-                label = "休息点",
-                row = 4,
-                columnSlot = 3,
-                type = CommissionDungeonNodeType.Camp
-            ),
-            CommissionDungeonNode(
-                id = "szg_4",
-                label = "首领",
-                row = 5,
-                columnSlot = 3,
-                type = CommissionDungeonNodeType.Boss
-            ),
-            CommissionDungeonNode(
-                id = "szg_5",
-                label = "精英",
-                row = 5,
-                columnSlot = 4,
-                type = CommissionDungeonNodeType.Elite,
-                monsterSpawns = listOf(
-                    CommissionMonsterSpawn(commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "yezhu"), 3),
-                    CommissionMonsterSpawn(commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "choudanhua"), 3)
-                )
-            ),
-            CommissionDungeonNode(
-                id = "szg_2",
-                label = "小怪",
-                row = 6,
-                columnSlot = 2,
-                type = CommissionDungeonNodeType.Creep,
-                monsterSpawns = listOf(
-                    CommissionMonsterSpawn(commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "yezhu"), 9),
-                    CommissionMonsterSpawn(commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "choudanhua"), 3)
-                )
-            ),
-            CommissionDungeonNode(
-                id = "szg_3",
-                label = "大怪",
-                row = 6,
-                columnSlot = 4,
-                type = CommissionDungeonNodeType.Elite,
-                monsterSpawns = listOf(
-                    CommissionMonsterSpawn(commissionMonsterVariableName(COMMISSION_DUNGEON_REGION_SENGUO, "yezhu"), 6)
-                )
-            ),
-            CommissionDungeonNode(
-                id = "szg_1",
-                label = "底部营地",
-                row = 7,
-                columnSlot = 3,
-                type = CommissionDungeonNodeType.Camp
-            )
-        ),
-        routes = listOf(
-            CommissionDungeonRoute("szg_1", "szg_2"),
-            CommissionDungeonRoute("szg_1", "szg_3"),
-            CommissionDungeonRoute("szg_2", "szg_4"),
-            CommissionDungeonRoute("szg_3", "szg_4"),
-            CommissionDungeonRoute("szg_3", "szg_5"),
-            CommissionDungeonRoute("szg_4", "szg_6"),
-            CommissionDungeonRoute("szg_4", "szg_7"),
-            CommissionDungeonRoute("szg_5", "szg_7"),
-            CommissionDungeonRoute("szg_6", "szg_8"),
-            CommissionDungeonRoute("szg_7", "szg_8"),
-            CommissionDungeonRoute("szg_7", "szg_9"),
-            CommissionDungeonRoute("szg_8", "szg_10"),
-            CommissionDungeonRoute("szg_9", "szg_10"),
-            CommissionDungeonRoute("szg_10", "szg_11"),
-            CommissionDungeonRoute("szg_11", "szg_12")
-        )
+data class DailyMissionDungeonData(
+    val monsters: List<DailyMissionMonster>,
+    val dungeonMaps: List<DailyMissionDungeonMap>
+) {
+    val monsterByVariableName: Map<String, DailyMissionMonster> = monsters.associateBy { it.variableName }
+}
+
+fun parseDailyMissionDungeonData(rawJson: String): DailyMissionDungeonData {
+    return DailyMissionDungeonData(
+        monsters = parseDailyMissionMonsters(rawJson),
+        dungeonMaps = parseDailyMissionDungeonMaps(rawJson)
     )
-)
+}
+
+fun parseDailyMissionMonsters(rawJson: String): List<DailyMissionMonster> {
+    return runCatching {
+        val root = JSONObject(rawJson.trim())
+        val monstersArray = root.optJSONArray("monsters") ?: JSONArray()
+
+        buildList {
+            for (index in 0 until monstersArray.length()) {
+                val item = monstersArray.optJSONObject(index) ?: continue
+                val displayName = item.firstText("displayName", "name") ?: continue
+                val variableName = item.firstText("variableName", "variable") ?: continue
+                add(
+                    DailyMissionMonster(
+                        displayName = displayName,
+                        variableName = normalizeDailyMissionMonsterVariableName(variableName),
+                        pinyinName = item.firstText("pinyinName", "pinyin").orEmpty()
+                    )
+                )
+            }
+        }
+    }.getOrDefault(emptyList())
+}
+
+fun parseDailyMissionDungeonMaps(rawJson: String): List<DailyMissionDungeonMap> {
+    return runCatching {
+        val root = JSONObject(rawJson.trim())
+        val dungeonsArray = root.optJSONArray("dungeons") ?: JSONArray()
+
+        buildList {
+            for (index in 0 until dungeonsArray.length()) {
+                val item = dungeonsArray.optJSONObject(index) ?: continue
+                val name = item.firstText("name").orEmpty()
+                val variableName = item.firstText("variableName", "variable") ?: continue
+                val nodesArray = item.optJSONArray("nodes") ?: JSONArray()
+                val routesArray = item.optJSONArray("routes") ?: JSONArray()
+
+                val nodes = buildList {
+                    for (nodeIndex in 0 until nodesArray.length()) {
+                        val nodeItem = nodesArray.optJSONObject(nodeIndex) ?: continue
+                        val nodeId = nodeItem.firstText("id") ?: continue
+                        val spawnsArray = nodeItem.optJSONArray("monsterSpawns") ?: JSONArray()
+                        val monsterSpawns = buildList {
+                            for (spawnIndex in 0 until spawnsArray.length()) {
+                                val spawnItem = spawnsArray.optJSONObject(spawnIndex) ?: continue
+                                val monsterVariableName = spawnItem.firstText("monsterVariableName", "monster") ?: continue
+                                add(
+                                    DailyMissionMonsterSpawn(
+                                        monsterVariableName = normalizeDailyMissionMonsterVariableName(monsterVariableName),
+                                        count = spawnItem.optInt("count", 0)
+                                    )
+                                )
+                            }
+                        }.filter { it.count > 0 }
+
+                        add(
+                            DailyMissionDungeonNode(
+                                id = nodeId,
+                                label = nodeItem.firstText("label").orEmpty(),
+                                row = nodeItem.optInt("row", 0),
+                                columnSlot = nodeItem.optInt("columnSlot", 3),
+                                type = parseDailyMissionDungeonNodeType(nodeItem.firstText("type")),
+                                monsterSpawns = monsterSpawns
+                            )
+                        )
+                    }
+                }
+
+                val routes = buildList {
+                    for (routeIndex in 0 until routesArray.length()) {
+                        val routeItem = routesArray.optJSONObject(routeIndex) ?: continue
+                        val fromId = routeItem.firstText("fromId", "from") ?: continue
+                        val toId = routeItem.firstText("toId", "to") ?: continue
+                        add(DailyMissionDungeonRoute(fromId, toId))
+                    }
+                }
+
+                if (nodes.isNotEmpty() && routes.isNotEmpty()) {
+                    add(
+                            DailyMissionDungeonMap(
+                                name = name,
+                                variableName = variableName,
+                                nodes = nodes,
+                                routes = routes,
+                                sortOrder = item.optInt("sortOrder", Int.MAX_VALUE)
+                            )
+                        )
+                }
+            }
+        }
+    }.getOrDefault(emptyList())
+}
+
+fun normalizeDailyMissionMonsterVariableName(rawValue: String): String {
+    val value = rawValue.trim()
+    return when {
+        value.startsWith("dailymisson_monsterlist_") ->
+            "monster_${value.removePrefix("dailymisson_monsterlist_")}"
+        value.startsWith("dailymission_monsterlist_") ->
+            "monster_${value.removePrefix("dailymission_monsterlist_")}"
+        value.startsWith("monster_") -> value
+        value.isBlank() -> value
+        else -> "monster_$value"
+    }
+}
+
+fun parseDailyMissionDungeonNodeType(typeText: String?): DailyMissionDungeonNodeType {
+    return when (typeText.orEmpty().trim().lowercase(Locale.US)) {
+        "creep", "小怪", "杂兵" -> DailyMissionDungeonNodeType.Creep
+        "elite", "大怪", "精英" -> DailyMissionDungeonNodeType.Elite
+        "boss", "首领" -> DailyMissionDungeonNodeType.Boss
+        "camp", "营地", "休息点", "起始营地" -> DailyMissionDungeonNodeType.Camp
+        "destination", "终点" -> DailyMissionDungeonNodeType.Destination
+        else -> DailyMissionDungeonNodeType.Normal
+    }
+}
+
+fun loadBundledDailyMissionDungeonData(context: Context): DailyMissionDungeonData {
+    return buildDailyMissionDungeonData(
+        monstersJson = readBundledJson(context, BUNDLED_DAILY_MISSION_MONSTERS_FILE),
+        dungeonsJson = readBundledJson(context, BUNDLED_DAILY_MISSION_DUNGEONS_FILE)
+    ).takeIf { it.isUsable() } ?: DailyMissionDungeonData(emptyList(), emptyList())
+}
+
+private fun dailyMissionDungeonsLocalFile(context: Context): File {
+    return File(context.filesDir, LOCAL_DAILY_MISSION_DUNGEONS_FILE)
+}
+
+private fun dailyMissionMonstersLocalFile(context: Context): File {
+    return File(context.filesDir, LOCAL_DAILY_MISSION_MONSTERS_FILE)
+}
+
+fun readLocalDailyMissionDungeonsJson(context: Context): String? {
+    return runCatching {
+        dailyMissionDungeonsLocalFile(context)
+            .takeIf { it.exists() && it.isFile }
+            ?.readText(Charsets.UTF_8)
+    }.getOrNull()
+}
+
+fun writeLocalDailyMissionDungeonsJson(context: Context, rawJson: String) {
+    runCatching {
+        dailyMissionDungeonsLocalFile(context).writeText(rawJson, Charsets.UTF_8)
+    }
+}
+
+fun readLocalDailyMissionMonstersJson(context: Context): String? {
+    return runCatching {
+        dailyMissionMonstersLocalFile(context)
+            .takeIf { it.exists() && it.isFile }
+            ?.readText(Charsets.UTF_8)
+    }.getOrNull()
+}
+
+fun writeLocalDailyMissionMonstersJson(context: Context, rawJson: String) {
+    runCatching {
+        dailyMissionMonstersLocalFile(context).writeText(rawJson, Charsets.UTF_8)
+    }
+}
+
+fun dailyMissionDungeonDataVersion(rawJson: String?): Int {
+    if (rawJson.isNullOrBlank()) return 0
+    return runCatching {
+        JSONObject(rawJson.trim()).optInt("version", 0)
+    }.getOrDefault(0)
+}
+
+fun dailyMissionMonsterDataVersion(rawJson: String?): Int {
+    if (rawJson.isNullOrBlank()) return 0
+    return runCatching {
+        JSONObject(rawJson.trim()).optInt("version", 0)
+    }.getOrDefault(0)
+}
+
+fun loadLocalDailyMissionDungeonsJson(context: Context): String? {
+    val fileJson = readLocalDailyMissionDungeonsJson(context)
+    if (!fileJson.isNullOrBlank()) return fileJson
+
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    val cachedJson = prefs.getString(CACHED_DAILY_MISSION_DUNGEONS_JSON_KEY, null)
+        ?: prefs.getString(LEGACY_CACHED_DAILY_MISSION_DUNGEONS_JSON_KEY, null)
+    if (!cachedJson.isNullOrBlank()) {
+        val cachedData = parseDailyMissionDungeonData(cachedJson)
+        if (cachedData.isUsable()) {
+            writeLocalDailyMissionDungeonsJson(context, cachedJson)
+            prefs.edit(commit = true) {
+                putInt(
+                    CACHED_DAILY_MISSION_DUNGEONS_VERSION_KEY,
+                    dailyMissionDungeonDataVersion(cachedJson)
+                )
+            }
+            return cachedJson
+        }
+    }
+
+    return null
+}
+
+fun loadLocalDailyMissionMonstersJson(context: Context): String? {
+    val fileJson = readLocalDailyMissionMonstersJson(context)
+    if (!fileJson.isNullOrBlank()) return fileJson
+
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    val cachedJson = prefs.getString(CACHED_DAILY_MISSION_MONSTERS_JSON_KEY, null)
+    if (!cachedJson.isNullOrBlank()) {
+        val monsters = parseDailyMissionMonsters(cachedJson)
+        if (monsters.isNotEmpty()) {
+            writeLocalDailyMissionMonstersJson(context, cachedJson)
+            prefs.edit(commit = true) {
+                putInt(
+                    CACHED_DAILY_MISSION_MONSTERS_VERSION_KEY,
+                    dailyMissionMonsterDataVersion(cachedJson)
+                )
+            }
+            return cachedJson
+        }
+    }
+
+    return null
+}
+
+fun localDailyMissionDungeonDataVersion(context: Context): Int {
+    val localJson = loadLocalDailyMissionDungeonsJson(context)
+    val localVersion = if (
+        localJson != null &&
+        parseDailyMissionDungeonMaps(localJson).isNotEmpty()
+    ) {
+        dailyMissionDungeonDataVersion(localJson)
+    } else {
+        0
+    }
+    val bundledVersion = dailyMissionDungeonDataVersion(readBundledJson(context, BUNDLED_DAILY_MISSION_DUNGEONS_FILE))
+    return maxOf(localVersion, bundledVersion)
+}
+
+fun loadCachedDailyMissionDungeonData(context: Context): DailyMissionDungeonData {
+    val dungeonsJson = loadLocalDailyMissionDungeonsJson(context)
+    return buildDailyMissionDungeonData(
+        monstersJson = loadLocalDailyMissionMonstersJson(context),
+        dungeonsJson = dungeonsJson
+    ).takeIf { it.isUsable() }
+        ?: dungeonsJson
+            ?.let(::parseDailyMissionDungeonData)
+            ?.takeIf { it.isUsable() }
+        ?: loadBundledDailyMissionDungeonData(context)
+}
+
+fun localDailyMissionMonsterDataVersion(context: Context): Int {
+    val localJson = loadLocalDailyMissionMonstersJson(context)
+    val localVersion = if (
+        localJson != null &&
+        parseDailyMissionMonsters(localJson).isNotEmpty()
+    ) {
+        dailyMissionMonsterDataVersion(localJson)
+    } else {
+        0
+    }
+    val bundledVersion = dailyMissionMonsterDataVersion(readBundledJson(context, BUNDLED_DAILY_MISSION_MONSTERS_FILE))
+    return maxOf(localVersion, bundledVersion)
+}
+
+fun buildDailyMissionDungeonData(
+    monstersJson: String?,
+    dungeonsJson: String?
+): DailyMissionDungeonData {
+    val monsters = monstersJson
+        ?.let(::parseDailyMissionMonsters)
+        ?.takeIf { it.isNotEmpty() }
+        ?: dungeonsJson
+            ?.let(::parseDailyMissionMonsters)
+            .orEmpty()
+    val dungeonMaps = dungeonsJson
+        ?.let(::parseDailyMissionDungeonMaps)
+        .orEmpty()
+    return DailyMissionDungeonData(monsters = monsters, dungeonMaps = dungeonMaps)
+}
+
+suspend fun refreshRemoteDailyMissionDungeonDataIfNewer(context: Context): DailyMissionDungeonData? {
+    val prefs = context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+
+    return runCatching {
+        val dungeonConfig = remoteDataFileConfig(
+            context = context,
+            key = REMOTE_DATA_DUNGEON_DETAILS_KEY,
+            fallbackUrl = REMOTE_DAILY_MISSION_DUNGEONS_URL
+        )
+        val monsterConfig = remoteDataFileConfig(
+            context = context,
+            key = REMOTE_DATA_MONSTER_DETAILS_KEY,
+            fallbackUrl = REMOTE_DAILY_MISSION_MONSTERS_URL
+        )
+        var updated = false
+
+        val localDungeonVersion = localDailyMissionDungeonDataVersion(context)
+        if (dungeonConfig.version <= 0 || localDungeonVersion < dungeonConfig.version) {
+            val rawJson = downloadText(dungeonConfig.url)
+            val remoteVersion = dailyMissionDungeonDataVersion(rawJson)
+            val effectiveRemoteVersion = maxOf(remoteVersion, dungeonConfig.version)
+            if (
+                effectiveRemoteVersion > localDungeonVersion &&
+                parseDailyMissionDungeonMaps(rawJson).isNotEmpty()
+            ) {
+                writeLocalDailyMissionDungeonsJson(context, rawJson)
+                prefs.edit(commit = true) {
+                    putString(CACHED_DAILY_MISSION_DUNGEONS_JSON_KEY, rawJson)
+                    putInt(CACHED_DAILY_MISSION_DUNGEONS_VERSION_KEY, effectiveRemoteVersion)
+                    remove(LEGACY_CACHED_DAILY_MISSION_DUNGEONS_JSON_KEY)
+                    remove(LEGACY_CACHED_DAILY_MISSION_DUNGEONS_VERSION_KEY)
+                }
+                updated = true
+            }
+        }
+
+        val localMonsterVersion = localDailyMissionMonsterDataVersion(context)
+        if (monsterConfig.version <= 0 || localMonsterVersion < monsterConfig.version) {
+            val rawJson = downloadText(monsterConfig.url)
+            val remoteVersion = dailyMissionMonsterDataVersion(rawJson)
+            val effectiveRemoteVersion = maxOf(remoteVersion, monsterConfig.version)
+            if (
+                effectiveRemoteVersion > localMonsterVersion &&
+                parseDailyMissionMonsters(rawJson).isNotEmpty()
+            ) {
+                writeLocalDailyMissionMonstersJson(context, rawJson)
+                prefs.edit(commit = true) {
+                    putString(CACHED_DAILY_MISSION_MONSTERS_JSON_KEY, rawJson)
+                    putInt(CACHED_DAILY_MISSION_MONSTERS_VERSION_KEY, effectiveRemoteVersion)
+                }
+                updated = true
+            }
+        }
+
+        if (updated) loadCachedDailyMissionDungeonData(context) else null
+    }.getOrElse {
+        null
+    }
+}
+
+@Composable
+fun rememberDailyMissionDungeonData(): DailyMissionDungeonData {
+    val context = LocalContext.current
+    var data by remember(context) {
+        mutableStateOf(loadCachedDailyMissionDungeonData(context))
+    }
+
+    LaunchedEffect(context) {
+        refreshRemoteDailyMissionDungeonDataIfNewer(context)?.let { remoteData ->
+            data = remoteData
+        }
+    }
+
+    return data
+}
+
+fun DailyMissionDungeonData.isUsable(): Boolean {
+    return monsters.isNotEmpty() &&
+        dungeonMaps.isNotEmpty() &&
+        dungeonMaps.all { dungeonMap ->
+            val startNode = dungeonMap.startNode()
+            val destinationNode = dungeonMap.destinationNode()
+
+            startNode != null &&
+                destinationNode != null &&
+                dungeonMap.routeNodeIdPathsBetween(startNode.id, destinationNode.id).isNotEmpty()
+        }
+}
+
+@Composable
+fun DungeonInfoScreen(
+    onBack: () -> Unit
+) {
+    val dailyMissionDungeonData = rememberDailyMissionDungeonData()
+    val dailyMissionDungeonMaps = dailyMissionDungeonData.dungeonMaps
+    val dungeonChoices = remember(dailyMissionDungeonMaps) {
+        dailyMissionDungeonMaps
+            .mapNotNull { it.dungeonChoice() }
+            .distinct()
+    }
+    var selectedChoice by remember { mutableStateOf<DailyMissionDungeonChoice?>(null) }
+    var selectedDifficultySuffix by remember { mutableStateOf<String?>(null) }
+    val availableDifficulties = remember(dailyMissionDungeonMaps, selectedChoice) {
+        val choice = selectedChoice ?: return@remember emptyList<String>()
+        dailyMissionDungeonMaps
+            .filter { it.dungeonChoice() == choice }
+            .mapNotNull { it.difficultySuffix() }
+            .distinct()
+            .sortedBy(::dailyMissionDifficultyOrder)
+    }
+    val selectedDungeonMap = remember(dailyMissionDungeonMaps, selectedChoice, selectedDifficultySuffix) {
+        val choice = selectedChoice ?: return@remember null
+        val difficulty = selectedDifficultySuffix ?: return@remember null
+        dailyMissionDungeonMaps.firstOrNull {
+            it.dungeonChoice() == choice && it.difficultySuffix() == difficulty
+        }
+    }
+
+    SecondaryHomeScreen(
+        title = "副本资料",
+        subtitle = "查看副本地图和资料",
+        onBack = onBack,
+        pinnedTitleBar = true
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.92f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DungeonChoiceDropdownField(
+                        selectedChoice = selectedChoice,
+                        placeholder = "选择副本名称",
+                        enabled = dungeonChoices.isNotEmpty(),
+                        options = dungeonChoices,
+                        modifier = Modifier.weight(1f),
+                        onSelect = { choice ->
+                            selectedChoice = choice
+                            selectedDifficultySuffix = dailyMissionDungeonMaps
+                                .firstOrNull {
+                                    it.dungeonChoice() == choice &&
+                                        it.difficultySuffix() == DAILY_MISSION_DUNGEON_DIFFICULTY_NORMAL_HARD_SUFFIX
+                                }
+                                ?.difficultySuffix()
+                                ?: dailyMissionDungeonMaps
+                                    .firstOrNull { it.dungeonChoice() == choice }
+                                    ?.difficultySuffix()
+                        }
+                    )
+
+                    DungeonInfoDropdownField(
+                        text = selectedDifficultySuffix
+                            ?.let { dailyMissionDungeonDifficultyNameBySuffix[it] ?: it }
+                            ?: "选择难度",
+                        enabled = selectedChoice != null && availableDifficulties.isNotEmpty(),
+                        options = availableDifficulties.map { dailyMissionDungeonDifficultyNameBySuffix[it] ?: it },
+                        modifier = Modifier.width(108.dp),
+                        menuWidth = 108.dp,
+                        onSelect = { selectedText ->
+                            selectedDifficultySuffix = availableDifficulties.firstOrNull {
+                                (dailyMissionDungeonDifficultyNameBySuffix[it] ?: it) == selectedText
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        selectedDungeonMap?.let { dungeonMap ->
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp)
+                ) {
+                    Text(
+                        text = dungeonMap.dailyMissionDisplayName(),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF222222)
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    DailyMissionDungeonRouteCanvas(
+                        dungeonMap = dungeonMap,
+                        highlightedNodePath = emptyList(),
+                        highlightedTargetNodeIdsByMonster = emptyMap(),
+                        targetMonsterVariableNames = emptySet()
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DungeonChoiceDropdownField(
+    selectedChoice: DailyMissionDungeonChoice?,
+    placeholder: String,
+    enabled: Boolean,
+    options: List<DailyMissionDungeonChoice>,
+    modifier: Modifier = Modifier,
+    onSelect: (DailyMissionDungeonChoice) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .border(
+                    width = 1.dp,
+                    color = if (enabled) Color(0xFF6D4BB8) else Color(0xFFD0D0D0),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .background(if (enabled) Color.White.copy(alpha = 0.9f) else Color(0xFFEDEDED))
+                .clickable(enabled = enabled && options.isNotEmpty()) {
+                    expanded = true
+                }
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            if (selectedChoice == null) {
+                Text(
+                    text = placeholder,
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center,
+                    color = if (enabled) Color(0xFF222222) else Color(0xFF999999),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = selectedChoice.regionDisplayName(),
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        color = if (enabled) Color(0xFF222222) else Color(0xFF999999),
+                        modifier = Modifier.width(68.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(20.dp)
+                            .background(Color(0xFFD8D2E4))
+                    )
+                    Text(
+                        text = selectedChoice.instanceDisplayName(),
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        color = if (enabled) Color(0xFF222222) else Color(0xFF999999),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 8.dp)
+                    )
+                }
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .width(220.dp)
+                .shadow(8.dp, RoundedCornerShape(16.dp))
+                .background(Color.White.copy(alpha = 0.96f), RoundedCornerShape(16.dp))
+        ) {
+            Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                options.forEach { option ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(42.dp)
+                            .clickable {
+                                onSelect(option)
+                                expanded = false
+                            }
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = option.regionDisplayName(),
+                                fontSize = 14.sp,
+                                color = Color(0xFF555555),
+                                modifier = Modifier.width(64.dp)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(18.dp)
+                                    .background(Color(0xFFD8D2E4))
+                            )
+                            Text(
+                                text = option.instanceDisplayName(),
+                                fontSize = 14.sp,
+                                color = Color(0xFF333333),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DungeonInfoDropdownField(
+    text: String,
+    enabled: Boolean,
+    options: List<String>,
+    modifier: Modifier = Modifier,
+    menuWidth: androidx.compose.ui.unit.Dp = 220.dp,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .border(
+                    width = 1.dp,
+                    color = if (enabled) Color(0xFF6D4BB8) else Color(0xFFD0D0D0),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .background(if (enabled) Color.White.copy(alpha = 0.9f) else Color(0xFFEDEDED))
+                .clickable(enabled = enabled && options.isNotEmpty()) {
+                    expanded = true
+                }
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = text,
+                fontSize = 16.sp,
+                textAlign = TextAlign.Center,
+                color = if (enabled) Color(0xFF222222) else Color(0xFF999999),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        FloatingOptionMenu(
+            expanded = expanded,
+            options = options,
+            width = menuWidth,
+            onDismiss = { expanded = false },
+            onSelect = {
+                onSelect(it)
+                expanded = false
+            }
+        )
+    }
+}
 
 @Composable
 fun AssaultArmorBreakScreen(
@@ -481,7 +1057,7 @@ fun AssaultArmorBreakScreen(
 }
 
 @Composable
-fun CommissionMonsterLookupScreen(
+fun DailyMissionMonsterLookupScreen(
     onBack: () -> Unit
 ) {
     SecondaryHomeScreen(
@@ -490,24 +1066,46 @@ fun CommissionMonsterLookupScreen(
         onBack = onBack,
         pinnedTitleBar = true
     ) {
-        CommissionMonsterLookupTool()
+        DailyMissionMonsterLookupTool()
     }
 }
 
 @Composable
-fun CommissionMonsterLookupTool() {
+fun DailyMissionMonsterLookupTool() {
+    val dailyMissionDungeonData = rememberDailyMissionDungeonData()
+    val dailyMissionMonsters = dailyMissionDungeonData.monsters
+    val dailyMissionDungeonMaps = dailyMissionDungeonData.dungeonMaps
+    val dailyMissionMonsterByVariableName = dailyMissionDungeonData.monsterByVariableName
     var monsterSearchText by remember { mutableStateOf("") }
-    val selectedMonsterRequirements = remember { mutableStateListOf<CommissionMonsterRequirement>() }
+    val selectedMonsterRequirements = remember { mutableStateListOf<DailyMissionMonsterRequirement>() }
+    var searchedMonsterRequirements by remember { mutableStateOf<List<DailyMissionMonsterRequirement>>(emptyList()) }
+    var hasSearched by remember { mutableStateOf(false) }
+    var searchNeedsRefresh by remember { mutableStateOf(false) }
+    var showCriteriaChangedToast by remember { mutableStateOf(false) }
     var shouldShowResults by remember { mutableStateOf(false) }
     var expandedDungeonVariableName by remember { mutableStateOf("") }
-    val filteredMonsters = remember(monsterSearchText, selectedMonsterRequirements.toList()) {
+    val density = LocalDensity.current
+    val toastOffset = with(density) { 96.dp.roundToPx() }
+    val markSearchCriteriaChanged = {
+        if (hasSearched) {
+            searchNeedsRefresh = true
+            showCriteriaChangedToast = true
+        }
+    }
+    LaunchedEffect(showCriteriaChangedToast) {
+        if (showCriteriaChangedToast) {
+            delay(1000)
+            showCriteriaChangedToast = false
+        }
+    }
+    val filteredMonsters = remember(dailyMissionMonsters, monsterSearchText, selectedMonsterRequirements.toList()) {
         val keyword = monsterSearchText.trim()
         val selectedVariableNames = selectedMonsterRequirements.map { it.monsterVariableName }.toSet()
         if (keyword.isBlank()) {
             emptyList()
         } else {
             val normalizedKeyword = keyword.lowercase(Locale.US)
-            commissionMonsters.filter { monster ->
+            dailyMissionMonsters.filter { monster ->
                 monster.variableName !in selectedVariableNames &&
                     (keyword in monster.displayName ||
                     normalizedKeyword in monster.pinyinName
@@ -515,219 +1113,250 @@ fun CommissionMonsterLookupTool() {
             }
         }
     }
-    val routeResults = remember(selectedMonsterRequirements.toList(), shouldShowResults) {
-        if (!shouldShowResults || selectedMonsterRequirements.isEmpty()) {
+    val routeResults = remember(dailyMissionDungeonMaps, searchedMonsterRequirements, shouldShowResults) {
+        if (!shouldShowResults || searchedMonsterRequirements.isEmpty()) {
             emptyList()
         } else {
-            commissionDungeonMaps.flatMap { dungeonMap ->
-                dungeonMap.planRouteGroupsForMonsters(selectedMonsterRequirements)
-                    .mapIndexed { index, (routePlan, routeRequirements) ->
-                        CommissionDungeonRouteResult(
-                            routeKey = "${dungeonMap.variableName}_$index",
-                            dungeonMap = dungeonMap,
-                            routePlan = routePlan,
-                            requirements = routeRequirements
-                        )
-                    }
-            }
+            planDailyMissionDungeonRouteResults(
+                dungeonMaps = dailyMissionDungeonMaps,
+                requirements = searchedMonsterRequirements
+            )
         }
     }
 
-    Column {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.92f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp)
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.92f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                Text(
-                    text = "选择任务怪物（已选 ${selectedMonsterRequirements.size}/10）",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF222222)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = monsterSearchText,
-                    onValueChange = {
-                        monsterSearchText = it
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    leadingIcon = { SearchFieldIcon() },
-                    label = { Text("输入怪物名") },
-                    placeholder = {
-                        Text(
-                            text = "输入怪物名",
-                            color = Color(0xFF999999)
-                        )
-                    }
-                )
-
-                if (monsterSearchText.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(vertical = 6.dp)) {
-                            if (filteredMonsters.isEmpty()) {
-                                Text(
-                                    text = "未搜索到匹配怪物",
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                    fontSize = 14.sp,
-                                    color = Color(0xFF777777)
-                                )
-                            } else {
-                                filteredMonsters.forEach { monster ->
-                                    Text(
-                                        text = monster.displayName,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                if (selectedMonsterRequirements.size < 10) {
-                                                    selectedMonsterRequirements += CommissionMonsterRequirement(
-                                                        monsterVariableName = monster.variableName,
-                                                        requiredCount = 3
-                                                    )
-                                                }
-                                                monsterSearchText = ""
-                                            }
-                                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                                        fontSize = 16.sp,
-                                        color = Color(0xFF222222)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (selectedMonsterRequirements.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    selectedMonsterRequirements.forEachIndexed { index, requirement ->
-                        val selectedMonster = commissionMonsterByVariableName[requirement.monsterVariableName]
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = selectedMonster?.displayName.orEmpty(),
-                                modifier = Modifier.weight(1f),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF222222)
-                            )
-                            listOf(3, 4).forEach { count ->
-                                Button(
-                                    onClick = {
-                                        selectedMonsterRequirements[index] = requirement.copy(
-                                            requiredCount = count
-                                        )
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (requirement.requiredCount == count) {
-                                            Color(0xFF6D4BB8)
-                                        } else {
-                                            Color(0xFFE8E2F4)
-                                        },
-                                        contentColor = if (requirement.requiredCount == count) {
-                                            Color.White
-                                        } else {
-                                            Color(0xFF5B3E9E)
-                                        }
-                                    )
-                                ) {
-                                    Text("x$count")
-                                }
-                            }
-                            TextButton(
-                                onClick = {
-                                    selectedMonsterRequirements.removeAt(index)
-                                }
-                            ) {
-                                Text("删除")
-                            }
-                        }
-
-                        if (index != selectedMonsterRequirements.lastIndex) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(
-                        onClick = {
-                            shouldShowResults = true
-                            expandedDungeonVariableName = ""
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("搜索副本")
-                    }
-                }
-            }
-        }
-
-        if (shouldShowResults) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (routeResults.isEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp)
                 ) {
                     Text(
-                        text = "未找到同时包含已选怪物的副本",
-                        modifier = Modifier.padding(18.dp),
-                        fontSize = 16.sp,
-                        color = Color(0xFF777777)
+                        text = "选择任务怪物（已选 ${selectedMonsterRequirements.size}/10）",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF222222)
                     )
-                }
-            } else {
-                routeResults.forEach { routeResult ->
-                    CommissionDungeonMapCard(
-                        dungeonMap = routeResult.dungeonMap,
-                        routePlan = routeResult.routePlan,
-                        requirements = routeResult.requirements,
-                        expanded = expandedDungeonVariableName == routeResult.routeKey,
-                        onToggleExpanded = {
-                            expandedDungeonVariableName = if (expandedDungeonVariableName == routeResult.routeKey) {
-                                ""
-                            } else {
-                                routeResult.routeKey
-                            }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = monsterSearchText,
+                        onValueChange = {
+                            monsterSearchText = it
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        leadingIcon = { SearchFieldIcon() },
+                        label = { Text("输入怪物名") },
+                        placeholder = {
+                            Text(
+                                text = "输入怪物名",
+                                color = Color(0xFF999999)
+                            )
                         }
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (monsterSearchText.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                                if (filteredMonsters.isEmpty()) {
+                                    Text(
+                                        text = "未搜索到匹配怪物",
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF777777)
+                                    )
+                                } else {
+                                    filteredMonsters.forEach { monster ->
+                                        Text(
+                                            text = monster.displayName,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    if (selectedMonsterRequirements.size < 10) {
+                                                        selectedMonsterRequirements += DailyMissionMonsterRequirement(
+                                                            monsterVariableName = monster.variableName,
+                                                            requiredCount = 3
+                                                        )
+                                                        markSearchCriteriaChanged()
+                                                    }
+                                                    monsterSearchText = ""
+                                                }
+                                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                                            fontSize = 16.sp,
+                                            color = Color(0xFF222222)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (selectedMonsterRequirements.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        selectedMonsterRequirements.forEachIndexed { index, requirement ->
+                            val selectedMonster = dailyMissionMonsterByVariableName[requirement.monsterVariableName]
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = selectedMonster?.displayName.orEmpty(),
+                                    modifier = Modifier.weight(1f),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF222222)
+                                )
+                                listOf(3, 4).forEach { count ->
+                                    Button(
+                                        onClick = {
+                                            if (requirement.requiredCount != count) {
+                                                selectedMonsterRequirements[index] = requirement.copy(
+                                                    requiredCount = count
+                                                )
+                                                markSearchCriteriaChanged()
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (requirement.requiredCount == count) {
+                                                Color(0xFF6D4BB8)
+                                            } else {
+                                                Color(0xFFE8E2F4)
+                                            },
+                                            contentColor = if (requirement.requiredCount == count) {
+                                                Color.White
+                                            } else {
+                                                Color(0xFF5B3E9E)
+                                            }
+                                        )
+                                    ) {
+                                        Text("x$count")
+                                    }
+                                }
+                                TextButton(
+                                    onClick = {
+                                        selectedMonsterRequirements.removeAt(index)
+                                        markSearchCriteriaChanged()
+                                    }
+                                ) {
+                                    Text("删除")
+                                }
+                            }
+
+                            if (index != selectedMonsterRequirements.lastIndex) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Button(
+                            onClick = {
+                                searchedMonsterRequirements = selectedMonsterRequirements.toList()
+                                hasSearched = true
+                                searchNeedsRefresh = false
+                                showCriteriaChangedToast = false
+                                shouldShowResults = true
+                                expandedDungeonVariableName = ""
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("搜索副本")
+                        }
+                    }
+                }
+            }
+
+            if (shouldShowResults) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (routeResults.isEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Text(
+                            text = "未找到同时包含已选怪物的副本",
+                            modifier = Modifier.padding(18.dp),
+                            fontSize = 16.sp,
+                            color = Color(0xFF777777)
+                        )
+                    }
+                } else {
+                    routeResults.forEach { routeResult ->
+                        DailyMissionDungeonMapCard(
+                            dungeonMap = routeResult.dungeonMap,
+                            routePlan = routeResult.routePlan,
+                            requirements = routeResult.requirements,
+                            monsterByVariableName = dailyMissionMonsterByVariableName,
+                            expanded = expandedDungeonVariableName == routeResult.routeKey,
+                            onToggleExpanded = {
+                                expandedDungeonVariableName = if (expandedDungeonVariableName == routeResult.routeKey) {
+                                    ""
+                                } else {
+                                    routeResult.routeKey
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "功能思路参考杖剑工具小程序同类功能，副本数据来源李沐泽，界面与路线算法由本软件独立开发",
+                modifier = Modifier.fillMaxWidth(),
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.72f),
+                textAlign = TextAlign.Center
+            )
+        }
+
+        Popup(
+            alignment = Alignment.Center,
+            offset = IntOffset(x = 0, y = toastOffset),
+            properties = PopupProperties(focusable = false)
+        ) {
+            AnimatedVisibility(
+                visible = showCriteriaChangedToast,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color.Black.copy(alpha = 0.72f))
+                        .padding(horizontal = 18.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = "条件已修改，请重新搜索",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "功能思路参考杖剑工具小程序同类功能，副本数据来源李沐泽，界面与路线算法由本软件独立开发",
-            modifier = Modifier.fillMaxWidth(),
-            fontSize = 12.sp,
-            color = Color.White.copy(alpha = 0.72f),
-            textAlign = TextAlign.Center
-        )
     }
 }
 
@@ -752,10 +1381,11 @@ fun SearchFieldIcon() {
 }
 
 @Composable
-fun CommissionDungeonMapCard(
-    dungeonMap: CommissionDungeonMap,
-    routePlan: CommissionDungeonRoutePlan,
-    requirements: List<CommissionMonsterRequirement>,
+fun DailyMissionDungeonMapCard(
+    dungeonMap: DailyMissionDungeonMap,
+    routePlan: DailyMissionDungeonRoutePlan,
+    requirements: List<DailyMissionMonsterRequirement>,
+    monsterByVariableName: Map<String, DailyMissionMonster>,
     expanded: Boolean,
     onToggleExpanded: () -> Unit
 ) {
@@ -773,7 +1403,7 @@ fun CommissionDungeonMapCard(
                 .padding(18.dp)
         ) {
             Text(
-                text = dungeonMap.commissionDisplayName(),
+                text = dungeonMap.dailyMissionDisplayName(),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF222222)
@@ -788,7 +1418,7 @@ fun CommissionDungeonMapCard(
             ) {
                 Text(
                     text = "可完成：${requirements.joinToString("、") { requirement ->
-                        val displayName = commissionMonsterByVariableName[requirement.monsterVariableName]
+                        val displayName = monsterByVariableName[requirement.monsterVariableName]
                             ?.displayName
                             ?: requirement.monsterVariableName
                         val matchedCount = routePlan.matchedCountByMonster[requirement.monsterVariableName]
@@ -811,11 +1441,12 @@ fun CommissionDungeonMapCard(
             if (expanded) {
                 Spacer(modifier = Modifier.height(14.dp))
 
-                CommissionDungeonRouteCanvas(
+                DailyMissionDungeonRouteCanvas(
                     dungeonMap = dungeonMap,
                     highlightedNodePath = routePlan.nodePath,
                     highlightedTargetNodeIdsByMonster = routePlan.targetNodeIdsByMonster,
-                    targetMonsterVariableNames = requirements.map { it.monsterVariableName }.toSet()
+                    targetMonsterVariableNames = requirements.map { it.monsterVariableName }.toSet(),
+                    monsterByVariableName = monsterByVariableName
                 )
             }
         }
@@ -823,11 +1454,12 @@ fun CommissionDungeonMapCard(
 }
 
 @Composable
-fun CommissionDungeonRouteCanvas(
-    dungeonMap: CommissionDungeonMap,
+fun DailyMissionDungeonRouteCanvas(
+    dungeonMap: DailyMissionDungeonMap,
     highlightedNodePath: List<String>,
     highlightedTargetNodeIdsByMonster: Map<String, Set<String>>,
-    targetMonsterVariableNames: Set<String>
+    targetMonsterVariableNames: Set<String>,
+    monsterByVariableName: Map<String, DailyMissionMonster> = emptyMap()
 ) {
     val nodeMap = remember(dungeonMap) {
         dungeonMap.nodes.associateBy { it.id }
@@ -837,7 +1469,7 @@ fun CommissionDungeonRouteCanvas(
     }
     val highlightedRouteKeys = remember(highlightedNodePath) {
         highlightedNodePath.zipWithNext()
-            .map { (fromId, toId) -> commissionDungeonRouteKey(fromId, toId) }
+            .map { (fromId, toId) -> dailyMissionDungeonRouteKey(fromId, toId) }
             .toSet()
     }
     val maxRow = remember(dungeonMap) {
@@ -869,7 +1501,7 @@ fun CommissionDungeonRouteCanvas(
                 .height(mapHeight)
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                fun pointOf(node: CommissionDungeonNode): Offset {
+                fun pointOf(node: DailyMissionDungeonNode): Offset {
                     val columnSpacing = size.width / (columnCount + 1f)
                     val rowSpacing = size.height / (rowCount + 1f)
                     return Offset(
@@ -881,7 +1513,7 @@ fun CommissionDungeonRouteCanvas(
                 dungeonMap.routes.forEach { route ->
                     val from = nodeMap[route.fromId] ?: return@forEach
                     val to = nodeMap[route.toId] ?: return@forEach
-                    val routeKey = commissionDungeonRouteKey(route.fromId, route.toId)
+                    val routeKey = dailyMissionDungeonRouteKey(route.fromId, route.toId)
                     drawLine(
                         color = if (routeKey in highlightedRouteKeys) {
                             Color(0xFFE6E86D)
@@ -917,9 +1549,9 @@ fun CommissionDungeonRouteCanvas(
                     Image(
                         painter = painterResource(
                             id = if (node.id in highlightedNodeIds) {
-                                R.drawable.dailymission_map_node_chosen
+                                R.drawable.dungeon_map_node_chosen
                             } else {
-                                R.drawable.dailymission_map_node
+                                R.drawable.dungeon_map_node
                             }
                         ),
                         contentDescription = null,
@@ -927,7 +1559,7 @@ fun CommissionDungeonRouteCanvas(
                     )
 
                     Image(
-                        painter = painterResource(id = commissionDungeonNodeIcon(node.type)),
+                        painter = painterResource(id = dailyMissionDungeonNodeIcon(node.type)),
                         contentDescription = node.label,
                         modifier = Modifier.size(iconSize)
                     )
@@ -941,7 +1573,7 @@ fun CommissionDungeonRouteCanvas(
                         node.monsterSpawns
                             .firstOrNull { it.monsterVariableName == monsterVariableName }
                             ?.let { spawn ->
-                                val displayName = commissionMonsterByVariableName[monsterVariableName]
+                                val displayName = monsterByVariableName[monsterVariableName]
                                     ?.displayName
                                     ?: monsterVariableName
                                 "${displayName}x${spawn.count}"
@@ -967,14 +1599,161 @@ fun CommissionDungeonRouteCanvas(
     }
 }
 
-fun CommissionDungeonMap.planRouteForMonsters(
-    requirements: List<CommissionMonsterRequirement>
-): CommissionDungeonRoutePlan? {
+fun planDailyMissionDungeonRouteResults(
+    dungeonMaps: List<DailyMissionDungeonMap>,
+    requirements: List<DailyMissionMonsterRequirement>
+): List<DailyMissionDungeonRouteResult> {
+    if (requirements.isEmpty()) return emptyList()
+
+    data class CandidateRoute(
+        val dungeonMap: DailyMissionDungeonMap,
+        val routePlan: DailyMissionDungeonRoutePlan,
+        val coveredRequirements: Set<DailyMissionMonsterRequirement>
+    )
+
+    val candidates = dungeonMaps.flatMap { dungeonMap ->
+        val startNode = dungeonMap.startNode() ?: return@flatMap emptyList()
+        val destinationNode = dungeonMap.destinationNode() ?: return@flatMap emptyList()
+
+        dungeonMap.routeNodeIdPathsBetween(startNode.id, destinationNode.id).mapNotNull { path ->
+            val coveredRequirements = requirements.filter { requirement ->
+                dungeonMap.countMonsterOnPath(path, requirement.monsterVariableName) >= requirement.requiredCount
+            }.toSet()
+            if (coveredRequirements.isEmpty()) return@mapNotNull null
+
+            val targetNodeIdsByMonster = coveredRequirements.associate { requirement ->
+                requirement.monsterVariableName to path.filter { nodeId ->
+                    dungeonMap.nodeById(nodeId)?.monsterSpawns
+                        ?.any { spawn -> spawn.monsterVariableName == requirement.monsterVariableName } == true
+                }.toSet()
+            }
+            val matchedCountByMonster = coveredRequirements.associate { requirement ->
+                requirement.monsterVariableName to
+                    dungeonMap.countMonsterOnPath(path, requirement.monsterVariableName)
+            }
+
+            CandidateRoute(
+                dungeonMap = dungeonMap,
+                routePlan = DailyMissionDungeonRoutePlan(
+                    nodePath = path,
+                    targetNodeIdsByMonster = targetNodeIdsByMonster,
+                    matchedCountByMonster = matchedCountByMonster
+                ),
+                coveredRequirements = coveredRequirements
+            )
+        }
+    }.sortedWith(
+        compareByDescending<CandidateRoute> { it.coveredRequirements.size }
+            .thenBy { it.dungeonMap.difficultyOrder() }
+            .thenBy { it.dungeonMap.sortOrder }
+            .thenByDescending { it.dungeonMap.campNodeCount(it.routePlan.nodePath) }
+            .thenBy { it.routePlan.nodePath.size }
+    )
+
+    if (candidates.isEmpty()) return emptyList()
+
+    val allRequirements = requirements.toSet()
+    var bestCombination: List<CandidateRoute>? = null
+
+    fun betterCombination(
+        candidate: List<CandidateRoute>,
+        currentBest: List<CandidateRoute>?
+    ): Boolean {
+        if (currentBest == null) return true
+        if (candidate.size != currentBest.size) return candidate.size < currentBest.size
+
+        val candidateRedundantCoverage =
+            candidate.sumOf { it.coveredRequirements.size } - candidate.flatMap { it.coveredRequirements }.toSet().size
+        val bestRedundantCoverage =
+            currentBest.sumOf { it.coveredRequirements.size } - currentBest.flatMap { it.coveredRequirements }.toSet().size
+        if (candidateRedundantCoverage != bestRedundantCoverage) {
+            return candidateRedundantCoverage < bestRedundantCoverage
+        }
+
+        val candidateDifficulty = candidate.sumOf { it.dungeonMap.difficultyOrder() }
+        val bestDifficulty = currentBest.sumOf { it.dungeonMap.difficultyOrder() }
+        if (candidateDifficulty != bestDifficulty) return candidateDifficulty < bestDifficulty
+
+        val candidateOrder = candidate.sumOf { it.dungeonMap.sortOrder }
+        val bestOrder = currentBest.sumOf { it.dungeonMap.sortOrder }
+        if (candidateOrder != bestOrder) return candidateOrder < bestOrder
+
+        val candidateCampCount = candidate.sumOf { it.dungeonMap.campNodeCount(it.routePlan.nodePath) }
+        val bestCampCount = currentBest.sumOf { it.dungeonMap.campNodeCount(it.routePlan.nodePath) }
+        if (candidateCampCount != bestCampCount) return candidateCampCount > bestCampCount
+
+        val candidateLength = candidate.sumOf { it.routePlan.nodePath.size }
+        val bestLength = currentBest.sumOf { it.routePlan.nodePath.size }
+        return candidateLength < bestLength
+    }
+
+    fun searchCombination(
+        startIndex: Int,
+        selectedRoutes: List<CandidateRoute>,
+        coveredRequirements: Set<DailyMissionMonsterRequirement>
+    ) {
+        if (coveredRequirements.containsAll(allRequirements)) {
+            if (betterCombination(selectedRoutes, bestCombination)) {
+                bestCombination = selectedRoutes
+            }
+            return
+        }
+        if (startIndex >= candidates.size) return
+        if (bestCombination != null && selectedRoutes.size >= bestCombination.orEmpty().size) return
+
+        for (index in startIndex until candidates.size) {
+            val candidate = candidates[index]
+            val newRequirements = candidate.coveredRequirements - coveredRequirements
+            if (newRequirements.isEmpty()) continue
+            searchCombination(
+                startIndex = index + 1,
+                selectedRoutes = selectedRoutes + candidate,
+                coveredRequirements = coveredRequirements + candidate.coveredRequirements
+            )
+        }
+    }
+
+    searchCombination(
+        startIndex = 0,
+        selectedRoutes = emptyList(),
+        coveredRequirements = emptySet()
+    )
+
+    var assignedRequirements = emptySet<DailyMissionMonsterRequirement>()
+    return bestCombination.orEmpty()
+        .sortedWith(
+            compareBy<CandidateRoute> { it.dungeonMap.difficultyOrder() }
+                .thenBy { it.dungeonMap.sortOrder }
+                .thenBy { route -> requirements.indexOf(route.coveredRequirements.minBy { requirements.indexOf(it) }) }
+        )
+        .mapIndexedNotNull { index, candidate ->
+            val routeRequirements = (candidate.coveredRequirements - assignedRequirements)
+                .sortedBy { requirements.indexOf(it) }
+            if (routeRequirements.isEmpty()) {
+                null
+            } else {
+                assignedRequirements = assignedRequirements + routeRequirements
+                val routeMonsterVariableNames = routeRequirements.map { it.monsterVariableName }.toSet()
+                DailyMissionDungeonRouteResult(
+                    routeKey = "${candidate.dungeonMap.variableName}_$index",
+                    dungeonMap = candidate.dungeonMap,
+                    routePlan = candidate.routePlan.copy(
+                        targetNodeIdsByMonster = candidate.routePlan.targetNodeIdsByMonster
+                            .filterKeys { it in routeMonsterVariableNames },
+                        matchedCountByMonster = candidate.routePlan.matchedCountByMonster
+                            .filterKeys { it in routeMonsterVariableNames }
+                    ),
+                    requirements = routeRequirements
+                )
+            }
+        }
+}
+
+fun DailyMissionDungeonMap.planRouteForMonsters(
+    requirements: List<DailyMissionMonsterRequirement>
+): DailyMissionDungeonRoutePlan? {
     if (requirements.isEmpty()) return null
-    val startNode = nodes
-        .filter { it.row == nodes.maxOfOrNull { node -> node.row } }
-        .minByOrNull { abs(it.columnSlot - 3) }
-        ?: return null
+    val startNode = startNode() ?: return null
     val destinationNode = destinationNode() ?: return null
     val completeRoutes = routeNodeIdPathsBetween(startNode.id, destinationNode.id)
     if (completeRoutes.isEmpty()) return null
@@ -1033,28 +1812,25 @@ fun CommissionDungeonMap.planRouteForMonsters(
             }
     ) ?: return null
 
-    return CommissionDungeonRoutePlan(
+    return DailyMissionDungeonRoutePlan(
         nodePath = bestCandidate.path,
         targetNodeIdsByMonster = bestCandidate.targetNodeIdsByMonster,
         matchedCountByMonster = bestCandidate.matchedCountByMonster
     )
 }
 
-fun CommissionDungeonMap.planRouteGroupsForMonsters(
-    requirements: List<CommissionMonsterRequirement>
-): List<Pair<CommissionDungeonRoutePlan, List<CommissionMonsterRequirement>>> {
+fun DailyMissionDungeonMap.planRouteGroupsForMonsters(
+    requirements: List<DailyMissionMonsterRequirement>
+): List<Pair<DailyMissionDungeonRoutePlan, List<DailyMissionMonsterRequirement>>> {
     if (requirements.isEmpty()) return emptyList()
-    val startNode = nodes
-        .filter { it.row == nodes.maxOfOrNull { node -> node.row } }
-        .minByOrNull { abs(it.columnSlot - 3) }
-        ?: return emptyList()
+    val startNode = startNode() ?: return emptyList()
     val destinationNode = destinationNode() ?: return emptyList()
     val completeRoutes = routeNodeIdPathsBetween(startNode.id, destinationNode.id)
     if (completeRoutes.isEmpty()) return emptyList()
 
     data class RouteCoverage(
-        val routePlan: CommissionDungeonRoutePlan,
-        val coveredRequirements: Set<CommissionMonsterRequirement>
+        val routePlan: DailyMissionDungeonRoutePlan,
+        val coveredRequirements: Set<DailyMissionMonsterRequirement>
     )
 
     val routeCoverages = completeRoutes.mapNotNull { path ->
@@ -1074,7 +1850,7 @@ fun CommissionDungeonMap.planRouteGroupsForMonsters(
         }
 
         RouteCoverage(
-            routePlan = CommissionDungeonRoutePlan(
+            routePlan = DailyMissionDungeonRoutePlan(
                 nodePath = path,
                 targetNodeIdsByMonster = targetNodeIdsByMonster,
                 matchedCountByMonster = matchedCountByMonster
@@ -1111,7 +1887,7 @@ fun CommissionDungeonMap.planRouteGroupsForMonsters(
     fun searchCombination(
         startIndex: Int,
         selectedRoutes: List<RouteCoverage>,
-        coveredRequirements: Set<CommissionMonsterRequirement>
+        coveredRequirements: Set<DailyMissionMonsterRequirement>
     ) {
         if (coveredRequirements.containsAll(allRequirements)) {
             if (betterCombination(selectedRoutes, bestCombination)) {
@@ -1141,7 +1917,7 @@ fun CommissionDungeonMap.planRouteGroupsForMonsters(
     )
 
     return bestCombination.orEmpty().fold(
-        emptyList<Pair<CommissionDungeonRoutePlan, List<CommissionMonsterRequirement>>>() to emptySet<CommissionMonsterRequirement>()
+        emptyList<Pair<DailyMissionDungeonRoutePlan, List<DailyMissionMonsterRequirement>>>() to emptySet<DailyMissionMonsterRequirement>()
     ) { (routeGroups, alreadyAssignedRequirements), routeCoverage ->
         val routeRequirements = (routeCoverage.coveredRequirements - alreadyAssignedRequirements)
             .sortedBy { requirement -> requirements.indexOf(requirement) }
@@ -1154,13 +1930,13 @@ fun CommissionDungeonMap.planRouteGroupsForMonsters(
     }.first
 }
 
-fun CommissionDungeonMap.planRouteForMonster(
+fun DailyMissionDungeonMap.planRouteForMonster(
     monsterVariableName: String,
     requiredCount: Int
-): CommissionDungeonRoutePlan? {
+): DailyMissionDungeonRoutePlan? {
     return planRouteForMonsters(
         listOf(
-            CommissionMonsterRequirement(
+            DailyMissionMonsterRequirement(
                 monsterVariableName = monsterVariableName,
                 requiredCount = requiredCount
             )
@@ -1168,7 +1944,7 @@ fun CommissionDungeonMap.planRouteForMonster(
     )
 }
 
-fun CommissionDungeonMap.countMonsterOnPath(path: List<String>, monsterVariableName: String): Int {
+fun DailyMissionDungeonMap.countMonsterOnPath(path: List<String>, monsterVariableName: String): Int {
     return path.sumOf { nodeId ->
         nodeById(nodeId)?.monsterSpawns
             ?.firstOrNull { spawn -> spawn.monsterVariableName == monsterVariableName }
@@ -1177,27 +1953,73 @@ fun CommissionDungeonMap.countMonsterOnPath(path: List<String>, monsterVariableN
     }
 }
 
-fun commissionMonsterVariableName(regionCode: String, monsterCode: String): String {
-    return "dailymisson_monsterlist_${regionCode}_$monsterCode"
+fun dailyMissionMonsterVariableName(regionCode: String, monsterCode: String): String {
+    return "monster_${regionCode}_$monsterCode"
 }
 
-fun CommissionDungeonMap.commissionDisplayName(): String {
+fun DailyMissionDungeonMap.dailyMissionDisplayName(): String {
     val parts = variableName.split("_")
     if (parts.size < 4) return name
-    val regionName = commissionDungeonRegionNameByCode[parts[1]] ?: parts[1]
-    val instanceName = commissionDungeonInstanceNameByCode[parts[2]] ?: parts[2]
-    val difficultyName = commissionDungeonDifficultyNameBySuffix[parts[3]] ?: parts[3]
+    val regionName = dailyMissionDungeonRegionNameByCode[parts[1]] ?: parts[1]
+    val instanceName = dailyMissionDungeonInstanceNameByCode[parts[2]] ?: parts[2]
+    val difficultyName = dailyMissionDungeonDifficultyNameBySuffix[parts[3]] ?: parts[3]
     return "$regionName-$instanceName-$difficultyName"
 }
 
-fun CommissionDungeonMap.destinationNode(): CommissionDungeonNode? {
-    return nodes
-        .filter { it.type == CommissionDungeonNodeType.Destination }
-        .minWithOrNull(compareBy<CommissionDungeonNode> { it.row }.thenBy { it.columnSlot })
-        ?: nodes.minWithOrNull(compareBy<CommissionDungeonNode> { it.row }.thenBy { it.columnSlot })
+private fun DailyMissionDungeonMap.dungeonChoice(): DailyMissionDungeonChoice? {
+    val parts = variableName.split("_")
+    if (parts.size < 4) return null
+    return DailyMissionDungeonChoice(
+        regionCode = parts[1],
+        instanceCode = parts[2]
+    )
 }
 
-fun CommissionDungeonMap.routeNodeIdPathsBetween(startId: String, targetId: String): List<List<String>> {
+private fun DailyMissionDungeonMap.difficultySuffix(): String? {
+    val parts = variableName.split("_")
+    return parts.getOrNull(3)
+}
+
+private fun DailyMissionDungeonMap.difficultyOrder(): Int {
+    return dailyMissionDifficultyOrder(difficultySuffix())
+}
+
+private fun dailyMissionDifficultyOrder(difficultySuffix: String?): Int {
+    return when (difficultySuffix) {
+        DAILY_MISSION_DUNGEON_DIFFICULTY_NORMAL_HARD_SUFFIX -> 0
+        DAILY_MISSION_DUNGEON_DIFFICULTY_NIGHTMARE_SUFFIX -> 1
+        DAILY_MISSION_DUNGEON_DIFFICULTY_HELL_SUFFIX -> 2
+        DAILY_MISSION_DUNGEON_DIFFICULTY_ABYSS_SUFFIX -> 3
+        else -> Int.MAX_VALUE
+    }
+}
+
+private fun DailyMissionDungeonChoice.displayName(): String {
+    return "${regionDisplayName()}-${instanceDisplayName()}"
+}
+
+private fun DailyMissionDungeonChoice.regionDisplayName(): String {
+    return dailyMissionDungeonRegionNameByCode[regionCode] ?: regionCode
+}
+
+private fun DailyMissionDungeonChoice.instanceDisplayName(): String {
+    return dailyMissionDungeonInstanceNameByCode[instanceCode] ?: instanceCode
+}
+
+fun DailyMissionDungeonMap.destinationNode(): DailyMissionDungeonNode? {
+    return nodes
+        .filter { it.type == DailyMissionDungeonNodeType.Destination }
+        .minWithOrNull(compareBy<DailyMissionDungeonNode> { it.row }.thenBy { it.columnSlot })
+        ?: nodes.minWithOrNull(compareBy<DailyMissionDungeonNode> { it.row }.thenBy { it.columnSlot })
+}
+
+fun DailyMissionDungeonMap.startNode(): DailyMissionDungeonNode? {
+    return nodes
+        .filter { it.row == nodes.maxOfOrNull { node -> node.row } }
+        .minByOrNull { abs(it.columnSlot - 3) }
+}
+
+fun DailyMissionDungeonMap.routeNodeIdPathsBetween(startId: String, targetId: String): List<List<String>> {
     val adjacency = buildMap<String, MutableList<String>> {
         routes.forEach { route ->
             getOrPut(route.fromId) { mutableListOf() }.add(route.toId)
@@ -1215,7 +2037,7 @@ fun CommissionDungeonMap.routeNodeIdPathsBetween(startId: String, targetId: Stri
         adjacency[currentId].orEmpty()
             .mapNotNull { nodeId -> nodeById(nodeId) }
             .filter { nextNode -> nextNode.row < currentNode.row }
-            .sortedWith(compareByDescending<CommissionDungeonNode> { it.row }.thenBy { it.columnSlot })
+            .sortedWith(compareByDescending<DailyMissionDungeonNode> { it.row }.thenBy { it.columnSlot })
             .forEach { nextNode ->
                 if (nextNode.id !in path) {
                     dfs(nextNode.id, path + nextNode.id)
@@ -1227,19 +2049,19 @@ fun CommissionDungeonMap.routeNodeIdPathsBetween(startId: String, targetId: Stri
     return candidatePaths
 }
 
-fun CommissionDungeonMap.extendRouteToDestination(path: List<String>): List<String> {
+fun DailyMissionDungeonMap.extendRouteToDestination(path: List<String>): List<String> {
     if (path.isEmpty()) return emptyList()
     val destinationNode = nodes
-        .filter { it.type == CommissionDungeonNodeType.Destination }
-        .minWithOrNull(compareBy<CommissionDungeonNode> { it.row }.thenBy { it.columnSlot })
-        ?: nodes.minWithOrNull(compareBy<CommissionDungeonNode> { it.row }.thenBy { it.columnSlot })
+        .filter { it.type == DailyMissionDungeonNodeType.Destination }
+        .minWithOrNull(compareBy<DailyMissionDungeonNode> { it.row }.thenBy { it.columnSlot })
+        ?: nodes.minWithOrNull(compareBy<DailyMissionDungeonNode> { it.row }.thenBy { it.columnSlot })
         ?: return path
     if (path.last() == destinationNode.id) return path
     val tail = routeNodeIdsBetween(path.last(), destinationNode.id) ?: return path
     return path + tail.drop(1)
 }
 
-fun CommissionDungeonMap.routeNodeIdsBetween(startId: String, targetId: String): List<String>? {
+fun DailyMissionDungeonMap.routeNodeIdsBetween(startId: String, targetId: String): List<String>? {
     val adjacency = buildMap<String, MutableList<String>> {
         routes.forEach { route ->
             getOrPut(route.fromId) { mutableListOf() }.add(route.toId)
@@ -1257,7 +2079,7 @@ fun CommissionDungeonMap.routeNodeIdsBetween(startId: String, targetId: String):
         adjacency[currentId].orEmpty()
             .mapNotNull { nodeId -> nodeById(nodeId) }
             .filter { nextNode -> nextNode.row < currentNode.row }
-            .sortedWith(compareByDescending<CommissionDungeonNode> { it.row }.thenBy { it.columnSlot })
+            .sortedWith(compareByDescending<DailyMissionDungeonNode> { it.row }.thenBy { it.columnSlot })
             .forEach { nextNode ->
                 if (nextNode.id !in path) {
                     dfs(nextNode.id, path + nextNode.id)
@@ -1275,7 +2097,7 @@ fun CommissionDungeonMap.routeNodeIdsBetween(startId: String, targetId: String):
     )
 }
 
-fun CommissionDungeonMap.findCombinedRouteNodeIds(
+fun DailyMissionDungeonMap.findCombinedRouteNodeIds(
     startId: String,
     monsterVariableName: String,
     requiredCount: Int
@@ -1307,7 +2129,7 @@ fun CommissionDungeonMap.findCombinedRouteNodeIds(
             .mapNotNull { nodeId -> nodeById(nodeId) }
             .filter { nextNode -> nextNode.id !in path }
             .filter { nextNode -> nextNode.row < currentNode.row }
-            .sortedWith(compareByDescending<CommissionDungeonNode> { it.row }.thenBy { it.columnSlot })
+            .sortedWith(compareByDescending<DailyMissionDungeonNode> { it.row }.thenBy { it.columnSlot })
             .forEach { nextNode ->
                 dfs(nextNode.id, path + nextNode.id)
             }
@@ -1328,15 +2150,15 @@ fun CommissionDungeonMap.findCombinedRouteNodeIds(
             .thenBy { path -> path.mapNotNull { nodeById(it)?.columnSlot }.minOrNull() ?: Int.MAX_VALUE })
 }
 
-fun CommissionDungeonMap.nodeById(nodeId: String): CommissionDungeonNode? {
+fun DailyMissionDungeonMap.nodeById(nodeId: String): DailyMissionDungeonNode? {
     return nodes.firstOrNull { it.id == nodeId }
 }
 
-fun CommissionDungeonMap.campNodeCount(path: List<String>): Int {
-    return path.count { nodeId -> nodeById(nodeId)?.type == CommissionDungeonNodeType.Camp }
+fun DailyMissionDungeonMap.campNodeCount(path: List<String>): Int {
+    return path.count { nodeId -> nodeById(nodeId)?.type == DailyMissionDungeonNodeType.Camp }
 }
 
-fun commissionDungeonRouteKey(fromId: String, toId: String): String {
+fun dailyMissionDungeonRouteKey(fromId: String, toId: String): String {
     return if (fromId <= toId) {
         "$fromId->$toId"
     } else {
@@ -1344,14 +2166,14 @@ fun commissionDungeonRouteKey(fromId: String, toId: String): String {
     }
 }
 
-fun commissionDungeonNodeIcon(type: CommissionDungeonNodeType): Int {
+fun dailyMissionDungeonNodeIcon(type: DailyMissionDungeonNodeType): Int {
     return when (type) {
-        CommissionDungeonNodeType.Normal -> R.drawable.dailymission_map_camp
-        CommissionDungeonNodeType.Creep -> R.drawable.dailymission_map_monster_creep
-        CommissionDungeonNodeType.Elite -> R.drawable.dailymission_map_monster_elite
-        CommissionDungeonNodeType.Boss -> R.drawable.dailymission_map_monster_boss
-        CommissionDungeonNodeType.Camp -> R.drawable.dailymission_map_camp
-        CommissionDungeonNodeType.Destination -> R.drawable.dailymission_map_destination
+        DailyMissionDungeonNodeType.Normal -> R.drawable.dungeon_map_camp
+        DailyMissionDungeonNodeType.Creep -> R.drawable.dungeon_map_monster_creep
+        DailyMissionDungeonNodeType.Elite -> R.drawable.dungeon_map_monster_elite
+        DailyMissionDungeonNodeType.Boss -> R.drawable.dungeon_map_monster_boss
+        DailyMissionDungeonNodeType.Camp -> R.drawable.dungeon_map_camp
+        DailyMissionDungeonNodeType.Destination -> R.drawable.dungeon_map_destination
     }
 }
 
@@ -3339,4 +4161,5 @@ fun formatCoefficient(value: Double): String {
 fun formatPercent(value: Double): String {
     return String.format(Locale.US, "%.1f%%", value * 100)
 }
+
 
