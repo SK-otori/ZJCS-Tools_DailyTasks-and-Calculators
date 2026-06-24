@@ -43,6 +43,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import java.time.LocalDate
+
+fun ExchangeCodeReward.displayText(): String {
+    return quantity?.let { "$name x$it" } ?: name
+}
+
+fun ExchangeCodeNotice.rewardsSummary(): String {
+    return rewards.joinToString(separator = "、") { it.displayText() }
+}
+
 @Composable
 fun ExchangeCodeNoticeDialog(
     notices: List<ExchangeCodeNotice>,
@@ -70,26 +79,41 @@ fun ExchangeCodeNoticeDialog(
                     .verticalScroll(rememberScrollState())
             ) {
                 dialogNotices.forEach { notice ->
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(vertical = 6.dp)
                     ) {
-                        Text(
-                            text = notice.code,
-                            fontSize = 16.sp,
-                            color = Color(0xFF222222),
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        TextButton(
-                            onClick = {
-                                onCopy(notice.code)
-                                dialogNotices = dialogNotices.filterNot { it.code == notice.code }
-                            }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("一键复制")
+                            Text(
+                                text = notice.code,
+                                fontSize = 16.sp,
+                                color = Color(0xFF222222),
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            TextButton(
+                                onClick = {
+                                    onCopy(notice.code)
+                                    dialogNotices = dialogNotices.filterNot { it.code == notice.code }
+                                }
+                            ) {
+                                Text("一键复制")
+                            }
+                        }
+
+                        val rewardsText = notice.rewardsSummary()
+                        if (rewardsText.isNotBlank()) {
+                            Text(
+                                text = "奖励：$rewardsText",
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                color = Color(0xFF666666),
+                                modifier = Modifier.padding(end = 72.dp)
+                            )
                         }
                     }
                 }
@@ -384,6 +408,18 @@ fun ExchangeCodeListCard(
                         Text("不再提醒")
                     }
                 }
+            }
+
+            val rewardsText = notice.rewardsSummary()
+            if (rewardsText.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "奖励：$rewardsText",
+                    fontSize = 15.sp,
+                    lineHeight = 21.sp,
+                    color = if (expired) Color(0xFF777777) else Color(0xFF555555)
+                )
             }
         }
     }

@@ -45,10 +45,16 @@ data class UpdatePreviewNotice(
     val body: String
 )
 
+data class ExchangeCodeReward(
+    val name: String,
+    val quantity: Int? = null
+)
+
 data class ExchangeCodeNotice(
     val code: String,
     val startDate: LocalDate,
-    val endDate: LocalDate
+    val endDate: LocalDate,
+    val rewards: List<ExchangeCodeReward> = emptyList()
 )
 
 data class AppUpdateInfo(
@@ -114,6 +120,38 @@ fun parseRemoteDate(text: String?, fallback: LocalDate): LocalDate {
     }.getOrDefault(fallback)
 }
 
+fun parseExchangeCodeRewards(item: JSONObject): List<ExchangeCodeReward> {
+    val rewards = item.optJSONArray("rewards")
+        ?: item.optJSONArray("rewardItems")
+        ?: item.optJSONArray("prizes")
+        ?: return emptyList()
+
+    return buildList {
+        for (index in 0 until rewards.length()) {
+            when (val reward = rewards.opt(index)) {
+                is JSONObject -> {
+                    val name = reward.firstText("name", "reward", "item", "title") ?: continue
+                    val quantity = when {
+                        reward.has("quantity") -> reward.optInt("quantity")
+                        reward.has("count") -> reward.optInt("count")
+                        reward.has("amount") -> reward.optInt("amount")
+                        else -> null
+                    }?.takeIf { it > 0 }
+
+                    add(ExchangeCodeReward(name = name, quantity = quantity))
+                }
+
+                is String -> {
+                    val name = reward.trim()
+                    if (name.isNotEmpty()) {
+                        add(ExchangeCodeReward(name = name))
+                    }
+                }
+            }
+        }
+    }
+}
+
 fun remoteJsonArray(rawJson: String, vararg arrayKeys: String): JSONArray {
     val trimmed = rawJson.trim()
 
@@ -148,7 +186,8 @@ fun parseExchangeCodeNotices(rawJson: String): List<ExchangeCodeNotice> {
                         endDate = parseRemoteDate(
                             item.firstText("endDate", "expireDate", "expiresAt", "end"),
                             LocalDate.of(2099, 12, 31)
-                        )
+                        ),
+                        rewards = parseExchangeCodeRewards(item)
                     )
                 )
             }

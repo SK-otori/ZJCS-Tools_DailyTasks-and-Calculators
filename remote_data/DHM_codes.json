@@ -5,7 +5,17 @@
     "title": "限时兑换码",
     "description": "2026年6月24日至2026年7月1日可用。",
     "startDate": "2026-06-24",
-    "endDate": "2026-07-01"
+    "endDate": "2026-07-01",
+    "rewards": [
+      {
+        "name": "命运果实",
+        "quantity": 1
+      },
+      {
+        "name": "结缘绳",
+        "quantity": 1
+      }
+    ]
   },
   {
     "id": "limited-2026-06-17-ecommerce-live-relic",
@@ -13,7 +23,17 @@
     "title": "限时兑换码",
     "description": "2026年6月17日至2026年6月24日可用。",
     "startDate": "2026-06-17",
-    "endDate": "2026-06-24"
+    "endDate": "2026-06-24",
+    "rewards": [
+      {
+        "name": "命运果实",
+        "quantity": 1
+      },
+      {
+        "name": "星之愿",
+        "quantity": 1
+      }
+    ]
   },
   {
     "id": "limited-2026-06-16-618-shopping",
@@ -117,7 +137,25 @@
     "title": "长期兑换码",
     "description": "长期可用。",
     "startDate": "2026-06-01",
-    "endDate": "2099-12-31"
+    "endDate": "2099-12-31",
+    "rewards": [
+      {
+        "name": "石块",
+        "quantity": 100
+      },
+      {
+        "name": "粗炼石",
+        "quantity": 300
+      },
+      {
+        "name": "时之砂",
+        "quantity": 300
+      },
+      {
+        "name": "序初精华",
+        "quantity": 1000
+      }
+    ]
   },
   {
     "id": "permanent-zj888",
@@ -125,7 +163,17 @@
     "title": "长期兑换码",
     "description": "长期可用。",
     "startDate": "2026-06-01",
-    "endDate": "2099-12-31"
+    "endDate": "2099-12-31",
+    "rewards": [
+      {
+        "name": "星之愿",
+        "quantity": 2
+      },
+      {
+        "name": "晨星",
+        "quantity": 200
+      }
+    ]
   },
   {
     "id": "permanent-vip666",
@@ -133,7 +181,21 @@
     "title": "长期兑换码",
     "description": "长期可用。",
     "startDate": "2026-06-01",
-    "endDate": "2099-12-31"
+    "endDate": "2099-12-31",
+    "rewards": [
+      {
+        "name": "丰饶之叶",
+        "quantity": 100
+      },
+      {
+        "name": "命运果实",
+        "quantity": 1
+      },
+      {
+        "name": "体力",
+        "quantity": 25
+      }
+    ]
   },
   {
     "id": "permanent-vip888",
@@ -141,7 +203,21 @@
     "title": "长期兑换码",
     "description": "长期可用。",
     "startDate": "2026-06-01",
-    "endDate": "2099-12-31"
+    "endDate": "2099-12-31",
+    "rewards": [
+      {
+        "name": "传说女神牌",
+        "quantity": 2
+      },
+      {
+        "name": "史诗女神牌",
+        "quantity": 10
+      },
+      {
+        "name": "稀有女神牌",
+        "quantity": 20
+      }
+    ]
   },
   {
     "id": "permanent-ch666",
@@ -149,7 +225,17 @@
     "title": "长期兑换码",
     "description": "长期可用。",
     "startDate": "2026-06-01",
-    "endDate": "2099-12-31"
+    "endDate": "2099-12-31",
+    "rewards": [
+      {
+        "name": "命运果实",
+        "quantity": 3
+      },
+      {
+        "name": "晨星",
+        "quantity": 200
+      }
+    ]
   },
   {
     "id": "permanent-ch888",
@@ -157,6 +243,16 @@
     "title": "长期兑换码",
     "description": "长期可用。",
     "startDate": "2026-06-01",
-    "endDate": "2099-12-31"
+    "endDate": "2099-12-31",
+    "rewards": [
+      {
+        "name": "随机稀有礼物",
+        "quantity": 5
+      },
+      {
+        "name": "星之愿",
+        "quantity": 2
+      }
+    ]
   }
 ]
