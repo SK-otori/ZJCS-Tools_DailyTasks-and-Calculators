@@ -16,4 +16,6 @@ local.properties
 apk_chinese_strings.txt
 /.idea/vcs.xml
 /app/release/
+.codex-spreadsheet-work/
+outputs/
 remote_data/阿里云RAM用户AccessKey/
