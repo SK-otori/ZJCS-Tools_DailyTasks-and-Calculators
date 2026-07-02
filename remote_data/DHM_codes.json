@@ -5,7 +5,17 @@
     "title": "限时兑换码",
     "description": "2026年7月1日至2026年7月8日可用。",
     "startDate": "2026-07-01",
-    "endDate": "2026-07-08"
+    "endDate": "2026-07-08",
+    "rewards": [
+      {
+        "name": "命运果实",
+        "quantity": 1
+      },
+      {
+        "name": "稀有女神牌",
+        "quantity": 20
+      }
+    ]
   },
   {
     "id": "limited-2026-06-24-football-bump",
