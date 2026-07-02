@@ -20,7 +20,7 @@
       "url": "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/DHM_codes.json"
     },
     "updatePreviewNotices": {
-      "version": 1,
+      "version": 2,
       "url": "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/XQF_Announcements.json"
     },
     "officialNotices": {
