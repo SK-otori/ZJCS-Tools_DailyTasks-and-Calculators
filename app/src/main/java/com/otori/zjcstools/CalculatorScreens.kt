@@ -75,11 +75,52 @@ import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.pow
 import kotlin.math.roundToInt
+
+private const val PLAYER_LEVEL_EXP_FILE = "level_exp_player_with_exp_diff.csv"
+private const val BLESS_LEVEL_EXP_FILE = "level_bless_with_exp_diff.csv"
+private val UPGRADE_TARGET_TIME_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+
+enum class UpgradeTimeTableType(
+    val fileName: String
+) {
+    Player(PLAYER_LEVEL_EXP_FILE),
+    Bless(BLESS_LEVEL_EXP_FILE)
+}
+
+enum class UpgradeSeason(
+    val label: String,
+    val rank: String,
+    val playerLevelCap: Int
+) {
+    S1("S1-泽之国", "Silver", 100),
+    S2("S2-龙之国", "Gold", 130),
+    S3("S3-羽之国", "Saint", 160),
+    S4("S4-哈帕迪", "Legend", 190),
+    S5("S5-伊格尼斯", "Angel", 220)
+}
+
+data class UpgradeExpEntry(
+    val level: Int,
+    val totalExp: Long,
+    val rank: String? = null
+)
+
+data class UpgradeTimeResult(
+    val requiredExp: Long,
+    val targetTimeText: String?,
+    val targetLabel: String
+)
+
 @Composable
 fun DungeonMorningStarScreen(
     onBack: () -> Unit
@@ -484,6 +525,341 @@ fun normalizeDailyMissionMonsterVariableName(rawValue: String): String {
         value.isBlank() -> value
         else -> "monster_$value"
     }
+}
+
+@Composable
+fun UpgradeTimeScreen(
+    onBack: () -> Unit
+) {
+    SecondaryHomeScreen(
+        title = "升级时间计算器",
+        subtitle = "根据经验表估算达到目标等级所需时间",
+        onBack = onBack,
+        pinnedTitleBar = true
+    ) {
+        UpgradeTimeCalculator()
+    }
+}
+
+@Composable
+fun UpgradeTimeCalculator() {
+    val context = LocalContext.current
+    var selectedSeason by remember { mutableStateOf(UpgradeSeason.S5) }
+    val tables = remember {
+        mapOf(
+            UpgradeTimeTableType.Player to loadUpgradeExpTable(context, UpgradeTimeTableType.Player),
+            UpgradeTimeTableType.Bless to loadUpgradeExpTable(context, UpgradeTimeTableType.Bless)
+        )
+    }
+    val currentTable = remember(tables, selectedSeason) {
+        buildUpgradeSeasonTable(
+            playerEntries = tables[UpgradeTimeTableType.Player].orEmpty(),
+            blessEntries = tables[UpgradeTimeTableType.Bless].orEmpty(),
+            season = selectedSeason
+        )
+    }
+    val minCurrentLevel = 0
+    val minTargetLevel = maxOf(1, currentTable.minOfOrNull { it.level } ?: 1)
+    val maxTargetLevel = currentTable.maxOfOrNull { it.level } ?: 1
+    var currentLevelText by remember { mutableStateOf("1") }
+    var currentExpText by remember { mutableStateOf("0") }
+    var targetLevelText by remember { mutableStateOf("") }
+    var dailyExpText by remember { mutableStateOf("") }
+    var nowMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(selectedSeason, maxTargetLevel) {
+        currentLevelText = currentLevelText
+            .toIntOrNull()
+            ?.coerceIn(minCurrentLevel, maxTargetLevel)
+            ?.toString()
+            ?: minCurrentLevel.toString()
+
+        targetLevelText = targetLevelText
+            .toIntOrNull()
+            ?.coerceIn(minTargetLevel, maxTargetLevel)
+            ?.toString()
+            ?: maxTargetLevel.toString()
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            nowMillis = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
+
+    val currentLevel = currentLevelText.toIntOrNull()
+    val currentExp = currentExpText.toLongOrNull() ?: 0L
+    val targetLevel = targetLevelText.toIntOrNull()
+    val dailyExp = dailyExpText.toDoubleOrNull()
+    val result = calculateUpgradeTimeResult(
+        entries = currentTable,
+        currentLevel = currentLevel,
+        currentExp = currentExp,
+        targetLevel = targetLevel,
+        dailyExp = dailyExp,
+        nowMillis = nowMillis
+    )
+    val currentLevelTotal = currentLevel?.let { upgradeTotalExpAtLevel(currentTable, it) }
+    val nextLevelTotal = currentLevel?.let { level ->
+        currentTable.firstOrNull { it.level > level }?.totalExp
+    }
+    val currentLevelMaxExp = if (currentLevelTotal != null && nextLevelTotal != null) {
+        (nextLevelTotal - currentLevelTotal).coerceAtLeast(0L)
+    } else {
+        null
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.92f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "升级时间计算器",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF222222)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            DungeonInfoDropdownField(
+                text = selectedSeason.label,
+                enabled = true,
+                options = UpgradeSeason.entries.map { it.label },
+                menuWidth = 180.dp,
+                onSelect = { selectedLabel ->
+                    selectedSeason = UpgradeSeason.entries.firstOrNull { it.label == selectedLabel }
+                        ?: selectedSeason
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CalculatorNumberField(
+                    label = "当前等级",
+                    value = currentLevelText,
+                    onValueChange = { currentLevelText = it },
+                    modifier = Modifier.weight(1f),
+                    persistenceKey = "upgrade_time_${selectedSeason.name}_current_level"
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                CalculatorNumberField(
+                    label = "当前本级经验",
+                    value = currentExpText,
+                    onValueChange = { currentExpText = it },
+                    modifier = Modifier.weight(1f),
+                    persistenceKey = "upgrade_time_${selectedSeason.name}_current_exp"
+                )
+            }
+
+            currentLevelMaxExp?.let { maxExp ->
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "当前等级到下一级需要 ${formatLongNumber(maxExp)} 经验",
+                    color = Color(0xFF666666),
+                    fontSize = 13.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CalculatorNumberField(
+                    label = "目标等级",
+                    value = targetLevelText,
+                    onValueChange = { targetLevelText = it },
+                    modifier = Modifier.weight(1f),
+                    persistenceKey = "upgrade_time_${selectedSeason.name}_target_level"
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                CalculatorNumberField(
+                    label = "每日经验",
+                    value = dailyExpText,
+                    onValueChange = { dailyExpText = it },
+                    modifier = Modifier.weight(1f),
+                    persistenceKey = "upgrade_time_${selectedSeason.name}_daily_exp"
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF7F8FA))
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "计算结果",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF333333)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    ResultLine("目标", result?.targetLabel ?: "--")
+                    ResultLine("还需经验", result?.let { formatLongNumber(it.requiredExp) } ?: "--")
+                    ResultLine(
+                        label = "预计时间",
+                        value = result?.targetTimeText ?: if (dailyExpText.isBlank()) {
+                            "请输入每日经验"
+                        } else {
+                            "--"
+                        }
+                    )
+                }
+            }
+
+            if (currentTable.isEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "未读取到经验表，请检查 assets 中的 $PLAYER_LEVEL_EXP_FILE 和 $BLESS_LEVEL_EXP_FILE",
+                    fontSize = 13.sp,
+                    color = Color(0xFFD32F2F)
+                )
+            } else {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "可计算等级范围：$minCurrentLevel - $maxTargetLevel",
+                    fontSize = 13.sp,
+                    color = Color(0xFF666666)
+                )
+            }
+        }
+    }
+}
+
+fun loadUpgradeExpTable(
+    context: Context,
+    tableType: UpgradeTimeTableType
+): List<UpgradeExpEntry> {
+    return readBundledJson(context, tableType.fileName)
+        ?.let { rawText -> parseUpgradeExpTable(rawText, tableType) }
+        .orEmpty()
+}
+
+fun parseUpgradeExpTable(
+    rawText: String,
+    tableType: UpgradeTimeTableType
+): List<UpgradeExpEntry> {
+    return rawText
+        .lineSequence()
+        .drop(1)
+        .mapNotNull { line ->
+            val cells = line.split(",").map { it.trim() }
+            if (cells.isEmpty() || cells.first().startsWith("#")) {
+                return@mapNotNull null
+            }
+
+            when (tableType) {
+                UpgradeTimeTableType.Player -> {
+                    val level = cells.getOrNull(0)?.toIntOrNull() ?: return@mapNotNull null
+                    val totalExp = cells.getOrNull(1)?.toLongOrNull() ?: return@mapNotNull null
+                    UpgradeExpEntry(level = level, totalExp = totalExp)
+                }
+
+                UpgradeTimeTableType.Bless -> {
+                    val rank = cells.getOrNull(0).orEmpty()
+                    val level = cells.getOrNull(1)?.toIntOrNull() ?: return@mapNotNull null
+                    val totalExp = cells.getOrNull(2)?.toLongOrNull() ?: return@mapNotNull null
+                    UpgradeExpEntry(level = level, totalExp = totalExp, rank = rank)
+                }
+            }
+        }
+        .let { entries ->
+            if (tableType == UpgradeTimeTableType.Player) {
+                entries.distinctBy { it.level }
+            } else {
+                entries.distinctBy { "${it.rank}:${it.level}" }
+            }
+        }
+        .sortedBy { it.level }
+        .toList()
+}
+
+fun buildUpgradeSeasonTable(
+    playerEntries: List<UpgradeExpEntry>,
+    blessEntries: List<UpgradeExpEntry>,
+    season: UpgradeSeason
+): List<UpgradeExpEntry> {
+    val playerLevelCapTotalExp = upgradeTotalExpAtLevel(playerEntries, season.playerLevelCap)
+        ?: return emptyList()
+    val seasonPlayerEntries = playerEntries
+        .filter { it.level <= season.playerLevelCap }
+        .map { it.copy(rank = null) }
+    val seasonBlessEntries = blessEntries
+        .filter { it.rank.equals(season.rank, ignoreCase = true) }
+        .map { entry ->
+            UpgradeExpEntry(
+                level = season.playerLevelCap + entry.level,
+                totalExp = playerLevelCapTotalExp + entry.totalExp
+            )
+        }
+
+    return (seasonPlayerEntries + seasonBlessEntries)
+        .distinctBy { it.level }
+        .sortedBy { it.level }
+}
+
+fun calculateUpgradeTimeResult(
+    entries: List<UpgradeExpEntry>,
+    currentLevel: Int?,
+    currentExp: Long,
+    targetLevel: Int?,
+    dailyExp: Double?,
+    nowMillis: Long
+): UpgradeTimeResult? {
+    if (entries.isEmpty() || currentLevel == null || targetLevel == null) {
+        return null
+    }
+
+    val currentTotalExp = upgradeTotalExpAtLevel(entries, currentLevel) ?: return null
+    val targetEntry = entries.firstOrNull { it.level == targetLevel } ?: return null
+    val requiredExp = (targetEntry.totalExp - currentTotalExp - currentExp.coerceAtLeast(0L))
+        .coerceAtLeast(0L)
+    val targetTimeText = dailyExp
+        ?.takeIf { it > 0.0 }
+        ?.let { expPerDay ->
+            val requiredSeconds = ceil(requiredExp * 86400.0 / expPerDay).toLong()
+            Instant.ofEpochMilli(nowMillis)
+                .plusSeconds(requiredSeconds)
+                .atZone(ZoneId.systemDefault())
+                .format(UPGRADE_TARGET_TIME_FORMATTER)
+        }
+
+    return UpgradeTimeResult(
+        requiredExp = requiredExp,
+        targetTimeText = targetTimeText,
+        targetLabel = targetEntry.rank?.takeIf { it.isNotBlank() }?.let { rank ->
+            "$rank ${targetEntry.level}"
+        } ?: targetEntry.level.toString()
+    )
+}
+
+fun upgradeTotalExpAtLevel(
+    entries: List<UpgradeExpEntry>,
+    level: Int
+): Long? {
+    if (level <= 0) {
+        return 0L
+    }
+
+    return entries.firstOrNull { it.level == level }?.totalExp
 }
 
 fun parseDailyMissionDungeonNodeType(typeText: String?): DailyMissionDungeonNodeType {
@@ -4152,6 +4528,10 @@ fun ResultLine(
 
 fun formatNumber(value: Double): String {
     return String.format(Locale.US, "%.2f", value)
+}
+
+fun formatLongNumber(value: Long): String {
+    return String.format(Locale.US, "%,d", value)
 }
 
 fun formatCoefficient(value: Double): String {

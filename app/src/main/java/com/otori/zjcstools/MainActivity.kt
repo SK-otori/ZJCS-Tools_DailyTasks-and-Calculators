@@ -562,6 +562,7 @@ fun App() {
 
             "tools_home" -> ToolsHomeScreen(
                 onDungeonCalculatorClick = { navigateTo("tools_dungeon_morning_star") },
+                onUpgradeTimeCalculatorClick = { navigateTo("tools_upgrade_time") },
                 onAttributeCalculatorClick = { navigateTo("tools_attribute_morning_star") },
                 onAstralKamiCalculatorClick = { navigateTo("tools_astral_kami") },
                 onAssaultArmorBreakCalculatorClick = { navigateTo("tools_assault_armor_break") },
@@ -570,6 +571,10 @@ fun App() {
             )
 
             "tools_dungeon_morning_star" -> DungeonMorningStarScreen(
+                onBack = { goBack() }
+            )
+
+            "tools_upgrade_time" -> UpgradeTimeScreen(
                 onBack = { goBack() }
             )
 
@@ -943,6 +948,7 @@ fun MainHomeScreen(
 @Composable
 fun ToolsHomeScreen(
     onDungeonCalculatorClick: () -> Unit,
+    onUpgradeTimeCalculatorClick: () -> Unit,
     onAttributeCalculatorClick: () -> Unit,
     onAstralKamiCalculatorClick: () -> Unit,
     onAssaultArmorBreakCalculatorClick: () -> Unit,
@@ -958,6 +964,14 @@ fun ToolsHomeScreen(
             title = "副本晨星计算器",
             subtitle = "计算新本噩梦、新本炼狱和君临深渊的晨星期望",
             onClick = onDungeonCalculatorClick
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        HomeCardButton(
+            title = "升级时间计算器",
+            subtitle = "根据经验表和每日经验估算达到目标等级所需时间",
+            onClick = onUpgradeTimeCalculatorClick
         )
 
         Spacer(modifier = Modifier.height(18.dp))
