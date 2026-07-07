@@ -1,14 +1,14 @@
 {
   "enabled": true,
-  "versionCode": 10,
-  "versionName": "2.4.1",
-  "apkUrl": "https://gitee.com/evilian/ZJCS-Tools_DailyTasks-and-Calculators/releases/download/v2.4.1/zjcsTools-v2.4.1-release.apk",
+  "versionCode": 11,
+  "versionName": "2.4.2",
+  "apkUrl": "https://gitee.com/evilian/ZJCS-Tools_DailyTasks-and-Calculators/releases/download/v2.4.2/zjcsTools-v2.4.2-release.apk",
   "forceUpdate": false,
   "title": "发现新版本",
   "message": "检测到杖剑小助手有新版本可用。",
   "releaseNotes": [
-    "大幅优化代码",
-    "数据放至云端读取",
-    "怪物数据更新至将军陵"
+    "新增升级时间计算器，支持按赛季估算目标等级达成时间",
+    "支持当前经验单位切换，并自动限制等级与经验输入范围",
+    "优化升级结果展示，可查看还需经验、预计时间、所需天数和加速次数"
   ]
 }
