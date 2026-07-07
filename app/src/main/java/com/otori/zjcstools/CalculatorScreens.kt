@@ -75,6 +75,7 @@ import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -118,6 +119,8 @@ data class UpgradeExpEntry(
 data class UpgradeTimeResult(
     val requiredExp: Long,
     val targetTimeText: String?,
+    val requiredDaysText: String?,
+    val accelerationCount: Int?,
     val targetLabel: String
 )
 
@@ -564,7 +567,8 @@ fun UpgradeTimeCalculator() {
     var currentLevelText by remember { mutableStateOf("1") }
     var currentExpText by remember { mutableStateOf("0") }
     var targetLevelText by remember { mutableStateOf("") }
-    var dailyExpText by remember { mutableStateOf("") }
+    var hourlyExpText by remember { mutableStateOf("") }
+    var todayAccelerated by remember { mutableStateOf(false) }
     var nowMillis by remember { mutableStateOf(System.currentTimeMillis()) }
 
     LaunchedEffect(selectedSeason, maxTargetLevel) {
@@ -591,13 +595,14 @@ fun UpgradeTimeCalculator() {
     val currentLevel = currentLevelText.toIntOrNull()
     val currentExp = currentExpText.toLongOrNull() ?: 0L
     val targetLevel = targetLevelText.toIntOrNull()
-    val dailyExp = dailyExpText.toDoubleOrNull()
+    val hourlyExp = hourlyExpText.toDoubleOrNull()
     val result = calculateUpgradeTimeResult(
         entries = currentTable,
         currentLevel = currentLevel,
         currentExp = currentExp,
         targetLevel = targetLevel,
-        dailyExp = dailyExp,
+        hourlyExp = hourlyExp,
+        todayAccelerated = todayAccelerated,
         nowMillis = nowMillis
     )
     val currentLevelTotal = currentLevel?.let { upgradeTotalExpAtLevel(currentTable, it) }
@@ -609,7 +614,6 @@ fun UpgradeTimeCalculator() {
     } else {
         null
     }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -642,21 +646,42 @@ fun UpgradeTimeCalculator() {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CalculatorNumberField(
+                RangeLimitedNumberField(
                     label = "当前等级",
                     value = currentLevelText,
                     onValueChange = { currentLevelText = it },
+                    min = minCurrentLevel,
+                    max = maxTargetLevel,
                     modifier = Modifier.weight(1f),
-                    persistenceKey = "upgrade_time_${selectedSeason.name}_current_level"
+                    placeholderText = minCurrentLevel.toString(),
+                    persistenceKey = "upgrade_time_${selectedSeason.name}_current_level",
+                    onRangeCorrection = { normalizedLevel ->
+                        val nextLevel = normalizedLevel.valueText.toIntOrNull()
+                        val nextLevelTotal = nextLevel?.let { upgradeTotalExpAtLevel(currentTable, it) }
+                        val nextLevelUpperTotal = nextLevel?.let { level ->
+                            currentTable.firstOrNull { it.level > level }?.totalExp
+                        }
+                        if (nextLevelTotal != null && nextLevelUpperTotal != null) {
+                            val normalizedExp = clampNumberTextToRange(
+                                valueText = currentExpText,
+                                min = 0L,
+                                max = (nextLevelUpperTotal - nextLevelTotal).coerceAtLeast(0L)
+                            )
+                            currentExpText = normalizedExp.valueText
+                        }
+                    }
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                CalculatorNumberField(
+                RangeLimitedNumberField(
                     label = "当前本级经验",
                     value = currentExpText,
                     onValueChange = { currentExpText = it },
+                    min = 0L,
+                    max = currentLevelMaxExp ?: 0L,
                     modifier = Modifier.weight(1f),
+                    placeholderText = "0",
                     persistenceKey = "upgrade_time_${selectedSeason.name}_current_exp"
                 )
             }
@@ -676,23 +701,57 @@ fun UpgradeTimeCalculator() {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CalculatorNumberField(
+                RangeLimitedNumberField(
                     label = "目标等级",
                     value = targetLevelText,
                     onValueChange = { targetLevelText = it },
+                    min = minTargetLevel,
+                    max = maxTargetLevel,
                     modifier = Modifier.weight(1f),
+                    placeholderText = maxTargetLevel.toString(),
                     persistenceKey = "upgrade_time_${selectedSeason.name}_target_level"
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 CalculatorNumberField(
-                    label = "每日经验",
-                    value = dailyExpText,
-                    onValueChange = { dailyExpText = it },
+                    label = "每小时经验",
+                    value = hourlyExpText,
+                    onValueChange = { hourlyExpText = it },
                     modifier = Modifier.weight(1f),
-                    persistenceKey = "upgrade_time_${selectedSeason.name}_daily_exp"
+                    persistenceKey = "upgrade_time_${selectedSeason.name}_hourly_exp"
                 )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "今日已加速",
+                    fontSize = 16.sp,
+                    color = Color(0xFF444444),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Button(
+                    onClick = { todayAccelerated = !todayAccelerated },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (todayAccelerated) {
+                            Color(0xFF4CAF50)
+                        } else {
+                            Color(0xFF9E9E9E)
+                        }
+                    )
+                ) {
+                    Text(
+                        text = if (todayAccelerated) "是" else "否",
+                        color = Color.White
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -715,12 +774,17 @@ fun UpgradeTimeCalculator() {
                     ResultLine("目标", result?.targetLabel ?: "--")
                     ResultLine("还需经验", result?.let { formatLongNumber(it.requiredExp) } ?: "--")
                     ResultLine(
-                        label = "预计时间",
-                        value = result?.targetTimeText ?: if (dailyExpText.isBlank()) {
-                            "请输入每日经验"
+                        label = "达成时间",
+                        value = result?.targetTimeText ?: if (hourlyExpText.isBlank()) {
+                            "请输入每小时经验"
                         } else {
                             "--"
                         }
+                    )
+                    ResultLine("所需天数", result?.requiredDaysText ?: "--")
+                    ResultLine(
+                        label = "加速",
+                        value = result?.accelerationCount?.let { "包含${it}次加速" } ?: "--"
                     )
                 }
             }
@@ -821,7 +885,8 @@ fun calculateUpgradeTimeResult(
     currentLevel: Int?,
     currentExp: Long,
     targetLevel: Int?,
-    dailyExp: Double?,
+    hourlyExp: Double?,
+    todayAccelerated: Boolean,
     nowMillis: Long
 ): UpgradeTimeResult? {
     if (entries.isEmpty() || currentLevel == null || targetLevel == null) {
@@ -832,22 +897,114 @@ fun calculateUpgradeTimeResult(
     val targetEntry = entries.firstOrNull { it.level == targetLevel } ?: return null
     val requiredExp = (targetEntry.totalExp - currentTotalExp - currentExp.coerceAtLeast(0L))
         .coerceAtLeast(0L)
-    val targetTimeText = dailyExp
+    val acceleratedResult = hourlyExp
         ?.takeIf { it > 0.0 }
-        ?.let { expPerDay ->
-            val requiredSeconds = ceil(requiredExp * 86400.0 / expPerDay).toLong()
-            Instant.ofEpochMilli(nowMillis)
-                .plusSeconds(requiredSeconds)
-                .atZone(ZoneId.systemDefault())
-                .format(UPGRADE_TARGET_TIME_FORMATTER)
+        ?.let { expPerHour ->
+            calculateAcceleratedUpgradeTarget(
+                requiredExp = requiredExp,
+                hourlyExp = expPerHour,
+                todayAccelerated = todayAccelerated,
+                nowMillis = nowMillis
+            )
         }
 
     return UpgradeTimeResult(
         requiredExp = requiredExp,
-        targetTimeText = targetTimeText,
+        targetTimeText = acceleratedResult?.targetTimeText,
+        requiredDaysText = acceleratedResult?.requiredDaysText,
+        accelerationCount = acceleratedResult?.accelerationCount,
         targetLabel = targetEntry.rank?.takeIf { it.isNotBlank() }?.let { rank ->
             "$rank ${targetEntry.level}"
         } ?: targetEntry.level.toString()
+    )
+}
+
+data class AcceleratedUpgradeTarget(
+    val targetTimeText: String,
+    val requiredDaysText: String,
+    val accelerationCount: Int
+)
+
+fun calculateAcceleratedUpgradeTarget(
+    requiredExp: Long,
+    hourlyExp: Double,
+    todayAccelerated: Boolean,
+    nowMillis: Long
+): AcceleratedUpgradeTarget {
+    val zone = ZoneId.systemDefault()
+    val start = Instant.ofEpochMilli(nowMillis).atZone(zone)
+    val expPerSecond = hourlyExp / 3600.0
+    val accelerationExp = hourlyExp * 2.0
+    var remainingExp = requiredExp.toDouble()
+    var cursor = start
+    var accelerationCount = 0
+
+    if (remainingExp <= 0.0) {
+        return AcceleratedUpgradeTarget(
+            targetTimeText = start.format(UPGRADE_TARGET_TIME_FORMATTER),
+            requiredDaysText = "0 天",
+            accelerationCount = 0
+        )
+    }
+
+    if (!todayAccelerated) {
+        remainingExp -= accelerationExp
+        accelerationCount += 1
+
+        if (remainingExp <= 0.0) {
+            return AcceleratedUpgradeTarget(
+                targetTimeText = start.format(UPGRADE_TARGET_TIME_FORMATTER),
+                requiredDaysText = "0 天",
+                accelerationCount = accelerationCount
+            )
+        }
+    }
+
+    repeat(20000) {
+        val nextDayStart = cursor
+            .toLocalDate()
+            .plusDays(1)
+            .atStartOfDay(zone)
+        val secondsUntilNextDay = Duration.between(cursor, nextDayStart).seconds
+        val expUntilNextDay = secondsUntilNextDay * expPerSecond
+
+        if (remainingExp <= expUntilNextDay) {
+            val requiredSeconds = ceil(remainingExp / expPerSecond).toLong()
+            val target = cursor.plusSeconds(requiredSeconds)
+            val requiredDays = ceil(
+                Duration.between(start, target).seconds.coerceAtLeast(0L) / 86400.0
+            ).toInt()
+
+            return AcceleratedUpgradeTarget(
+                targetTimeText = target.format(UPGRADE_TARGET_TIME_FORMATTER),
+                requiredDaysText = "$requiredDays 天",
+                accelerationCount = accelerationCount
+            )
+        }
+
+        remainingExp -= expUntilNextDay
+        cursor = nextDayStart
+        remainingExp -= accelerationExp
+        accelerationCount += 1
+
+        if (remainingExp <= 0.0) {
+            val requiredDays = ceil(
+                Duration.between(start, cursor).seconds.coerceAtLeast(0L) / 86400.0
+            ).toInt()
+
+            return AcceleratedUpgradeTarget(
+                targetTimeText = cursor.format(UPGRADE_TARGET_TIME_FORMATTER),
+                requiredDaysText = "$requiredDays 天",
+                accelerationCount = accelerationCount
+            )
+        }
+    }
+
+    val fallbackTarget = start.plusDays(20000)
+    return AcceleratedUpgradeTarget(
+        targetTimeText = fallbackTarget.format(UPGRADE_TARGET_TIME_FORMATTER),
+        requiredDaysText = "超过 20000 天",
+        accelerationCount = accelerationCount
     )
 }
 
@@ -2775,8 +2932,6 @@ fun AstralKamiCalculator() {
     var currentExpText by remember { mutableStateOf("") }
     var isLevel100Active by remember { mutableStateOf(false) }
     var currentAstrolabeText by remember { mutableStateOf("") }
-    var levelCorrectionText by remember { mutableStateOf<String?>(null) }
-    var expCorrectionText by remember { mutableStateOf<String?>(null) }
 
     val result = calculateAstralKamiResult(
         blueGifts = blueGiftText.toIntOrNull() ?: 0,
@@ -2790,16 +2945,6 @@ fun AstralKamiCalculator() {
     val currentLevelValue = currentLevelText.toIntOrNull()
     val currentLevelForExpRange = currentLevelValue?.coerceIn(1, 100) ?: 1
     val maxCurrentExp = astralKamiMaxCurrentExp(currentLevelForExpRange)
-    val levelErrorText = levelCorrectionText ?: validationRangeError(
-        valueText = currentLevelText,
-        min = 1,
-        max = 100
-    )
-    val expErrorText = expCorrectionText ?: validationRangeError(
-        valueText = currentExpText,
-        min = 0,
-        max = maxCurrentExp
-    )
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -2870,19 +3015,17 @@ fun AstralKamiCalculator() {
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(modifier = Modifier.fillMaxWidth()) {
-                ValidatedNumberField(
+                RangeLimitedNumberField(
                     label = "当前等级",
                     value = if (isLevel100Active) "100" else currentLevelText,
-                    onValueChange = { input ->
-                        val normalizedLevel = clampNumberTextToRange(
-                            valueText = input,
-                            min = 1,
-                            max = 100
-                        )
-                        currentLevelText = normalizedLevel.valueText
-                        levelCorrectionText = normalizedLevel.errorText
-
-                        val nextLevel = currentLevelText.toIntOrNull()?.coerceIn(1, 100) ?: 1
+                    onValueChange = { currentLevelText = it },
+                    min = 1,
+                    max = 100,
+                    modifier = Modifier.weight(1f),
+                    placeholderText = "1",
+                    enabled = !isLevel100Active,
+                    onRangeCorrection = { normalizedLevel ->
+                        val nextLevel = normalizedLevel.valueText.toIntOrNull()?.coerceIn(1, 100) ?: 1
                         val nextMaxExp = astralKamiMaxCurrentExp(nextLevel)
                         val normalizedExp = clampNumberTextToRange(
                             valueText = currentExpText,
@@ -2890,43 +3033,31 @@ fun AstralKamiCalculator() {
                             max = nextMaxExp
                         )
                         currentExpText = normalizedExp.valueText
-                        expCorrectionText = normalizedExp.errorText
-                    },
-                    modifier = Modifier.weight(1f),
-                    placeholderText = "1",
-                    errorText = if (isLevel100Active) null else levelErrorText,
-                    enabled = !isLevel100Active
+                    }
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                ValidatedNumberField(
+                RangeLimitedNumberField(
                     label = "当前经验",
                     value = if (isLevel100Active) "0" else currentExpText,
-                    onValueChange = { input ->
-                        val normalizedExp = clampNumberTextToRange(
-                            valueText = input,
-                            min = 0,
-                            max = maxCurrentExp
-                        )
-                        currentExpText = normalizedExp.valueText
-                        expCorrectionText = normalizedExp.errorText
-                    },
+                    onValueChange = { currentExpText = it },
+                    min = 0,
+                    max = maxCurrentExp,
                     modifier = Modifier.weight(1f),
                     placeholderText = "0",
-                    errorText = if (isLevel100Active) null else expErrorText,
                     enabled = !isLevel100Active
                 )
             }
 
             if (isLevel100Active) {
                 Spacer(modifier = Modifier.height(8.dp))
-                CalculatorNumberField(
+                RangeLimitedNumberField(
                     label = "已有神权星盘数量",
                     value = currentAstrolabeText,
-                    onValueChange = { input ->
-                        currentAstrolabeText = clampNumberTextToRange(input, 0, 132).valueText
-                    },
+                    onValueChange = { currentAstrolabeText = it },
+                    min = 0,
+                    max = 132,
                     placeholderText = "0"
                 )
             }
@@ -3193,6 +3324,23 @@ fun validationRangeError(
     }
 }
 
+fun validationRangeError(
+    valueText: String,
+    min: Long,
+    max: Long
+): String? {
+    if (valueText.isBlank()) {
+        return null
+    }
+
+    val value = valueText.toLongOrNull() ?: return "输入超出范围，范围为 $min-$max"
+    return if (value in min..max) {
+        null
+    } else {
+        "输入超出范围，范围为 $min-$max"
+    }
+}
+
 data class NumberRangeClampResult(
     val valueText: String,
     val errorText: String?
@@ -3208,6 +3356,24 @@ fun clampNumberTextToRange(
     }
 
     val value = valueText.toIntOrNull()
+        ?: return NumberRangeClampResult(valueText, "输入超出范围，范围为 $min-$max")
+    val clampedValue = value.coerceIn(min, max)
+    return NumberRangeClampResult(
+        valueText = clampedValue.toString(),
+        errorText = if (value == clampedValue) null else "输入超出范围，范围为 $min-$max"
+    )
+}
+
+fun clampNumberTextToRange(
+    valueText: String,
+    min: Long,
+    max: Long
+): NumberRangeClampResult {
+    if (valueText.isBlank()) {
+        return NumberRangeClampResult("", null)
+    }
+
+    val value = valueText.toLongOrNull()
         ?: return NumberRangeClampResult(valueText, "输入超出范围，范围为 $min-$max")
     val clampedValue = value.coerceIn(min, max)
     return NumberRangeClampResult(
@@ -4333,7 +4499,7 @@ fun CalculatorNumberField(
         }
     }
 
-    LaunchedEffect(value) {
+    LaunchedEffect(value, fieldValue.text) {
         if (value != fieldValue.text) {
             fieldValue = TextFieldValue(value, selection = TextRange(value.length))
         }
@@ -4387,7 +4553,8 @@ fun ValidatedNumberField(
     modifier: Modifier = Modifier,
     placeholderText: String? = null,
     errorText: String? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    persistenceKey: String = "calculator_input_$label"
 ) {
     Box(modifier = modifier) {
         CalculatorNumberField(
@@ -4395,7 +4562,8 @@ fun ValidatedNumberField(
             value = value,
             onValueChange = onValueChange,
             placeholderText = placeholderText,
-            enabled = enabled
+            enabled = enabled,
+            persistenceKey = persistenceKey
         )
 
         if (errorText != null) {
@@ -4408,6 +4576,76 @@ fun ValidatedNumberField(
             )
         }
     }
+}
+
+@Composable
+fun RangeLimitedNumberField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    min: Int,
+    max: Int,
+    modifier: Modifier = Modifier,
+    placeholderText: String? = null,
+    enabled: Boolean = true,
+    persistenceKey: String = "calculator_input_$label",
+    onRangeCorrection: (NumberRangeClampResult) -> Unit = {}
+) {
+    RangeLimitedNumberField(
+        label = label,
+        value = value,
+        onValueChange = onValueChange,
+        min = min.toLong(),
+        max = max.toLong(),
+        modifier = modifier,
+        placeholderText = placeholderText,
+        enabled = enabled,
+        persistenceKey = persistenceKey,
+        onRangeCorrection = onRangeCorrection
+    )
+}
+
+@Composable
+fun RangeLimitedNumberField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    min: Long,
+    max: Long,
+    modifier: Modifier = Modifier,
+    placeholderText: String? = null,
+    enabled: Boolean = true,
+    persistenceKey: String = "calculator_input_$label",
+    onRangeCorrection: (NumberRangeClampResult) -> Unit = {}
+) {
+    val safeMin = min.coerceAtMost(max)
+    val safeMax = max.coerceAtLeast(min)
+    var correctionText by remember(safeMin, safeMax) { mutableStateOf<String?>(null) }
+    val errorText = correctionText ?: validationRangeError(
+        valueText = value,
+        min = safeMin,
+        max = safeMax
+    )
+
+    ValidatedNumberField(
+        label = label,
+        value = value,
+        onValueChange = { input ->
+            val normalizedValue = clampNumberTextToRange(
+                valueText = input,
+                min = safeMin,
+                max = safeMax
+            )
+            onValueChange(normalizedValue.valueText)
+            correctionText = normalizedValue.errorText
+            onRangeCorrection(normalizedValue)
+        },
+        modifier = modifier,
+        placeholderText = placeholderText,
+        errorText = if (enabled) errorText else null,
+        enabled = enabled,
+        persistenceKey = persistenceKey
+    )
 }
 
 @Composable
