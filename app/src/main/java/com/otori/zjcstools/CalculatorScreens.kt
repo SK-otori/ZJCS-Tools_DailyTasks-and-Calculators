@@ -77,7 +77,9 @@ import org.json.JSONObject
 import java.io.File
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.delay
@@ -88,6 +90,8 @@ import kotlin.math.roundToInt
 
 private const val PLAYER_LEVEL_EXP_FILE = "level_exp_player_with_exp_diff.csv"
 private const val BLESS_LEVEL_EXP_FILE = "level_bless_with_exp_diff.csv"
+private const val UPGRADE_TIME_SELECTED_SEASON_KEY = "upgrade_time_selected_season"
+private const val UPGRADE_TIME_TODAY_ACCELERATED_KEY = "upgrade_time_today_accelerated"
 private val UPGRADE_TARGET_TIME_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
@@ -108,6 +112,35 @@ enum class UpgradeSeason(
     S3("S3-羽之国", "Saint", 160),
     S4("S4-哈帕迪", "Legend", 190),
     S5("S5-伊格尼斯", "Angel", 220)
+}
+
+fun upgradeTimeCurrentLevelKey(season: UpgradeSeason): String =
+    "upgrade_time_${season.name}_current_level"
+
+fun upgradeTimeCurrentExpKey(season: UpgradeSeason): String =
+    "upgrade_time_${season.name}_current_exp"
+
+fun upgradeTimeCurrentExpUnitKey(season: UpgradeSeason): String =
+    "upgrade_time_${season.name}_current_exp_unit"
+
+fun upgradeTimeTargetLevelKey(season: UpgradeSeason): String =
+    "upgrade_time_${season.name}_target_level"
+
+fun upgradeTimeHourlyExpKey(season: UpgradeSeason): String =
+    "upgrade_time_${season.name}_hourly_exp"
+
+enum class UpgradeExpUnit(
+    val label: String,
+    val multiplier: Long
+) {
+    None("无", 1L),
+    TenThousand("万", 10_000L),
+    HundredMillion("亿", 100_000_000L);
+
+    fun next(): UpgradeExpUnit {
+        val entries = entries
+        return entries[(entries.indexOf(this) + 1) % entries.size]
+    }
 }
 
 data class UpgradeExpEntry(
@@ -547,7 +580,16 @@ fun UpgradeTimeScreen(
 @Composable
 fun UpgradeTimeCalculator() {
     val context = LocalContext.current
-    var selectedSeason by remember { mutableStateOf(UpgradeSeason.S5) }
+    val prefs = remember {
+        context.getSharedPreferences("check_data", Context.MODE_PRIVATE)
+    }
+    var selectedSeason by remember {
+        mutableStateOf(
+            UpgradeSeason.entries.firstOrNull {
+                it.name == prefs.getString(UPGRADE_TIME_SELECTED_SEASON_KEY, null)
+            } ?: UpgradeSeason.S5
+        )
+    }
     val tables = remember {
         mapOf(
             UpgradeTimeTableType.Player to loadUpgradeExpTable(context, UpgradeTimeTableType.Player),
@@ -564,25 +606,50 @@ fun UpgradeTimeCalculator() {
     val minCurrentLevel = 0
     val minTargetLevel = maxOf(1, currentTable.minOfOrNull { it.level } ?: 1)
     val maxTargetLevel = currentTable.maxOfOrNull { it.level } ?: 1
-    var currentLevelText by remember { mutableStateOf("1") }
-    var currentExpText by remember { mutableStateOf("0") }
+    var currentLevelText by remember { mutableStateOf("") }
+    var currentExpText by remember { mutableStateOf("") }
+    var currentExpUnit by remember { mutableStateOf(UpgradeExpUnit.None) }
     var targetLevelText by remember { mutableStateOf("") }
     var hourlyExpText by remember { mutableStateOf("") }
-    var todayAccelerated by remember { mutableStateOf(false) }
+    var todayAccelerated by remember {
+        mutableStateOf(prefs.getBoolean(UPGRADE_TIME_TODAY_ACCELERATED_KEY, false))
+    }
     var nowMillis by remember { mutableStateOf(System.currentTimeMillis()) }
 
-    LaunchedEffect(selectedSeason, maxTargetLevel) {
-        currentLevelText = currentLevelText
-            .toIntOrNull()
-            ?.coerceIn(minCurrentLevel, maxTargetLevel)
-            ?.toString()
-            ?: minCurrentLevel.toString()
+    LaunchedEffect(selectedSeason, minTargetLevel, maxTargetLevel) {
+        val savedUnit = UpgradeExpUnit.entries.firstOrNull {
+            it.name == prefs.getString(upgradeTimeCurrentExpUnitKey(selectedSeason), null)
+        } ?: UpgradeExpUnit.None
+        currentExpUnit = savedUnit
 
-        targetLevelText = targetLevelText
-            .toIntOrNull()
+        val restoredCurrentLevel = prefs
+            .getString(upgradeTimeCurrentLevelKey(selectedSeason), null)
+            ?.toIntOrNull()
+            ?.coerceIn(minCurrentLevel, maxTargetLevel)
+            ?: selectedSeason.playerLevelCap.coerceIn(minCurrentLevel, maxTargetLevel)
+        currentLevelText = restoredCurrentLevel.toString()
+
+        val restoredTargetLevel = prefs
+            .getString(upgradeTimeTargetLevelKey(selectedSeason), null)
+            ?.toIntOrNull()
             ?.coerceIn(minTargetLevel, maxTargetLevel)
-            ?.toString()
-            ?: maxTargetLevel.toString()
+            ?: maxTargetLevel
+        targetLevelText = restoredTargetLevel.toString()
+
+        val currentLevelTotal = upgradeTotalExpAtLevel(currentTable, restoredCurrentLevel)
+        val nextLevelTotal = currentTable.firstOrNull { it.level > restoredCurrentLevel }?.totalExp
+        val maxCurrentInputExp = if (currentLevelTotal != null && nextLevelTotal != null) {
+            (nextLevelTotal - currentLevelTotal).coerceAtLeast(0L).toDouble() / savedUnit.multiplier
+        } else {
+            0.0
+        }
+        currentExpText = clampNumberTextToRange(
+            valueText = prefs.getString(upgradeTimeCurrentExpKey(selectedSeason), null).orEmpty(),
+            min = 0.0,
+            max = maxCurrentInputExp
+        ).valueText.ifBlank { "0" }
+
+        hourlyExpText = prefs.getString(upgradeTimeHourlyExpKey(selectedSeason), "").orEmpty()
     }
 
     LaunchedEffect(Unit) {
@@ -593,7 +660,10 @@ fun UpgradeTimeCalculator() {
     }
 
     val currentLevel = currentLevelText.toIntOrNull()
-    val currentExp = currentExpText.toLongOrNull() ?: 0L
+    val currentExp = parseUpgradeUnitExp(
+        valueText = currentExpText,
+        unit = currentExpUnit
+    )
     val targetLevel = targetLevelText.toIntOrNull()
     val hourlyExp = hourlyExpText.toDoubleOrNull()
     val result = calculateUpgradeTimeResult(
@@ -614,6 +684,9 @@ fun UpgradeTimeCalculator() {
     } else {
         null
     }
+    val currentExpInputMax = currentLevelMaxExp
+        ?.let { maxExp -> maxExp.toDouble() / currentExpUnit.multiplier }
+        ?: 0.0
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -633,10 +706,12 @@ fun UpgradeTimeCalculator() {
                 text = selectedSeason.label,
                 enabled = true,
                 options = UpgradeSeason.entries.map { it.label },
-                menuWidth = 180.dp,
+                modifier = Modifier.fillMaxWidth(),
+                menuWidth = 320.dp,
                 onSelect = { selectedLabel ->
                     selectedSeason = UpgradeSeason.entries.firstOrNull { it.label == selectedLabel }
                         ?: selectedSeason
+                    prefs.edit { putString(UPGRADE_TIME_SELECTED_SEASON_KEY, selectedSeason.name) }
                 }
             )
 
@@ -652,9 +727,9 @@ fun UpgradeTimeCalculator() {
                     onValueChange = { currentLevelText = it },
                     min = minCurrentLevel,
                     max = maxTargetLevel,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(0.3f),
                     placeholderText = minCurrentLevel.toString(),
-                    persistenceKey = "upgrade_time_${selectedSeason.name}_current_level",
+                    persistenceKey = upgradeTimeCurrentLevelKey(selectedSeason),
                     onRangeCorrection = { normalizedLevel ->
                         val nextLevel = normalizedLevel.valueText.toIntOrNull()
                         val nextLevelTotal = nextLevel?.let { upgradeTotalExpAtLevel(currentTable, it) }
@@ -662,34 +737,61 @@ fun UpgradeTimeCalculator() {
                             currentTable.firstOrNull { it.level > level }?.totalExp
                         }
                         if (nextLevelTotal != null && nextLevelUpperTotal != null) {
+                            val maxInputExp = (nextLevelUpperTotal - nextLevelTotal)
+                                .coerceAtLeast(0L)
+                                .toDouble() / currentExpUnit.multiplier
                             val normalizedExp = clampNumberTextToRange(
                                 valueText = currentExpText,
-                                min = 0L,
-                                max = (nextLevelUpperTotal - nextLevelTotal).coerceAtLeast(0L)
+                                min = 0.0,
+                                max = maxInputExp
                             )
                             currentExpText = normalizedExp.valueText
+                            prefs.edit {
+                                putString(upgradeTimeCurrentExpKey(selectedSeason), normalizedExp.valueText)
+                            }
                         }
                     }
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                RangeLimitedNumberField(
+                RangeLimitedDecimalNumberField(
                     label = "当前本级经验",
                     value = currentExpText,
                     onValueChange = { currentExpText = it },
-                    min = 0L,
-                    max = currentLevelMaxExp ?: 0L,
-                    modifier = Modifier.weight(1f),
-                    placeholderText = "0",
-                    persistenceKey = "upgrade_time_${selectedSeason.name}_current_exp"
+                    min = 0.0,
+                    max = currentExpInputMax,
+                    modifier = Modifier.weight(0.7f),
+                    persistenceKey = upgradeTimeCurrentExpKey(selectedSeason),
+                    maxDecimalPlaces = 1,
+                    trailingContent = {
+                        UpgradeExpUnitTrailingButton(
+                            unit = currentExpUnit,
+                            onClick = {
+                            val nextUnit = currentExpUnit.next()
+                            val normalizedExp = clampNumberTextToRange(
+                                valueText = currentExpText,
+                                min = 0.0,
+                                max = currentLevelMaxExp
+                                    ?.let { it.toDouble() / nextUnit.multiplier }
+                                    ?: 0.0
+                            )
+                            currentExpUnit = nextUnit
+                            currentExpText = normalizedExp.valueText
+                            prefs.edit {
+                                putString(upgradeTimeCurrentExpUnitKey(selectedSeason), nextUnit.name)
+                                putString(upgradeTimeCurrentExpKey(selectedSeason), normalizedExp.valueText)
+                            }
+                            }
+                        )
+                    }
                 )
             }
 
             currentLevelMaxExp?.let { maxExp ->
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "当前等级到下一级需要 ${formatLongNumber(maxExp)} 经验",
+                    text = "当前等级到下一级需要 ${formatLongNumber(maxExp)} 经验，当前单位：${currentExpUnit.label}",
                     color = Color(0xFF666666),
                     fontSize = 13.sp
                 )
@@ -707,9 +809,9 @@ fun UpgradeTimeCalculator() {
                     onValueChange = { targetLevelText = it },
                     min = minTargetLevel,
                     max = maxTargetLevel,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(0.3f),
                     placeholderText = maxTargetLevel.toString(),
-                    persistenceKey = "upgrade_time_${selectedSeason.name}_target_level"
+                    persistenceKey = upgradeTimeTargetLevelKey(selectedSeason)
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -718,8 +820,8 @@ fun UpgradeTimeCalculator() {
                     label = "每小时经验",
                     value = hourlyExpText,
                     onValueChange = { hourlyExpText = it },
-                    modifier = Modifier.weight(1f),
-                    persistenceKey = "upgrade_time_${selectedSeason.name}_hourly_exp"
+                    modifier = Modifier.weight(0.7f),
+                    persistenceKey = upgradeTimeHourlyExpKey(selectedSeason)
                 )
             }
 
@@ -738,7 +840,12 @@ fun UpgradeTimeCalculator() {
                 )
 
                 Button(
-                    onClick = { todayAccelerated = !todayAccelerated },
+                    onClick = {
+                        todayAccelerated = !todayAccelerated
+                        prefs.edit {
+                            putBoolean(UPGRADE_TIME_TODAY_ACCELERATED_KEY, todayAccelerated)
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (todayAccelerated) {
                             Color(0xFF4CAF50)
@@ -880,6 +987,19 @@ fun buildUpgradeSeasonTable(
         .sortedBy { it.level }
 }
 
+fun parseUpgradeUnitExp(
+    valueText: String,
+    unit: UpgradeExpUnit
+): Long {
+    val value = valueText.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+    val actualValue = value * unit.multiplier
+    return if (actualValue >= Long.MAX_VALUE) {
+        Long.MAX_VALUE
+    } else {
+        actualValue.toLong()
+    }
+}
+
 fun calculateUpgradeTimeResult(
     entries: List<UpgradeExpEntry>,
     currentLevel: Int?,
@@ -942,7 +1062,7 @@ fun calculateAcceleratedUpgradeTarget(
     if (remainingExp <= 0.0) {
         return AcceleratedUpgradeTarget(
             targetTimeText = start.format(UPGRADE_TARGET_TIME_FORMATTER),
-            requiredDaysText = "0 天",
+            requiredDaysText = "0分钟",
             accelerationCount = 0
         )
     }
@@ -954,50 +1074,44 @@ fun calculateAcceleratedUpgradeTarget(
         if (remainingExp <= 0.0) {
             return AcceleratedUpgradeTarget(
                 targetTimeText = start.format(UPGRADE_TARGET_TIME_FORMATTER),
-                requiredDaysText = "0 天",
+                requiredDaysText = "0分钟",
                 accelerationCount = accelerationCount
             )
         }
     }
 
-    repeat(20000) {
-        val nextDayStart = cursor
-            .toLocalDate()
-            .plusDays(1)
-            .atStartOfDay(zone)
-        val secondsUntilNextDay = Duration.between(cursor, nextDayStart).seconds
-        val expUntilNextDay = secondsUntilNextDay * expPerSecond
+    var nextAccelerationTime = nextEightClockBoundary(start)
 
-        if (remainingExp <= expUntilNextDay) {
+    repeat(20000) {
+        val secondsUntilNextAcceleration = Duration.between(cursor, nextAccelerationTime).seconds
+        val expUntilNextAcceleration = secondsUntilNextAcceleration * expPerSecond
+
+        if (remainingExp <= expUntilNextAcceleration) {
             val requiredSeconds = ceil(remainingExp / expPerSecond).toLong()
             val target = cursor.plusSeconds(requiredSeconds)
-            val requiredDays = ceil(
-                Duration.between(start, target).seconds.coerceAtLeast(0L) / 86400.0
-            ).toInt()
 
             return AcceleratedUpgradeTarget(
                 targetTimeText = target.format(UPGRADE_TARGET_TIME_FORMATTER),
-                requiredDaysText = "$requiredDays 天",
+                requiredDaysText = formatUpgradeRequiredTimeByEightClock(start, target),
                 accelerationCount = accelerationCount
             )
         }
 
-        remainingExp -= expUntilNextDay
-        cursor = nextDayStart
+        remainingExp -= expUntilNextAcceleration
+        cursor = nextAccelerationTime
+
         remainingExp -= accelerationExp
         accelerationCount += 1
 
         if (remainingExp <= 0.0) {
-            val requiredDays = ceil(
-                Duration.between(start, cursor).seconds.coerceAtLeast(0L) / 86400.0
-            ).toInt()
-
             return AcceleratedUpgradeTarget(
                 targetTimeText = cursor.format(UPGRADE_TARGET_TIME_FORMATTER),
-                requiredDaysText = "$requiredDays 天",
+                requiredDaysText = formatUpgradeRequiredTimeByEightClock(start, cursor),
                 accelerationCount = accelerationCount
             )
         }
+
+        nextAccelerationTime = nextAccelerationTime.plusDays(1)
     }
 
     val fallbackTarget = start.plusDays(20000)
@@ -1006,6 +1120,47 @@ fun calculateAcceleratedUpgradeTarget(
         requiredDaysText = "超过 20000 天",
         accelerationCount = accelerationCount
     )
+}
+
+fun formatUpgradeRequiredTimeByEightClock(
+    start: ZonedDateTime,
+    target: ZonedDateTime
+): String {
+    val firstEightClock = nextEightClockBoundary(start)
+
+    if (target.isBefore(firstEightClock)) {
+        val durationSeconds = Duration.between(start, target).seconds.coerceAtLeast(0L)
+        val roundedMinutes = ceil(durationSeconds / 60.0).toLong()
+        val hours = roundedMinutes / 60
+        val minutes = roundedMinutes % 60
+        return when {
+            hours > 0 && minutes > 0 -> "${hours}小时${minutes}分钟"
+            hours > 0 -> "${hours}小时"
+            else -> "${minutes}分钟"
+        }
+    }
+
+    val days = Duration.between(
+        firstEightClock,
+        target
+    ).seconds.coerceAtLeast(0L) / 86400 + 1
+    return "${days}天"
+}
+
+fun nextEightClockBoundary(time: ZonedDateTime): ZonedDateTime {
+    val todayEightClock = eightClockAt(time)
+    return if (time.isBefore(todayEightClock)) {
+        todayEightClock
+    } else {
+        todayEightClock.plusDays(1)
+    }
+}
+
+fun eightClockAt(time: ZonedDateTime): ZonedDateTime {
+    return time
+        .toLocalDate()
+        .atTime(LocalTime.of(8, 0))
+        .atZone(time.zone)
 }
 
 fun upgradeTotalExpAtLevel(
@@ -3341,6 +3496,24 @@ fun validationRangeError(
     }
 }
 
+fun validationRangeError(
+    valueText: String,
+    min: Double,
+    max: Double
+): String? {
+    if (valueText.isBlank()) {
+        return null
+    }
+
+    val value = valueText.toDoubleOrNull()
+        ?: return "输入超出范围，范围为 ${formatRangeNumber(min)}-${formatRangeNumber(max)}"
+    return if (value in min..max) {
+        null
+    } else {
+        "输入超出范围，范围为 ${formatRangeNumber(min)}-${formatRangeNumber(max)}"
+    }
+}
+
 data class NumberRangeClampResult(
     val valueText: String,
     val errorText: String?
@@ -3380,6 +3553,39 @@ fun clampNumberTextToRange(
         valueText = clampedValue.toString(),
         errorText = if (value == clampedValue) null else "输入超出范围，范围为 $min-$max"
     )
+}
+
+fun clampNumberTextToRange(
+    valueText: String,
+    min: Double,
+    max: Double
+): NumberRangeClampResult {
+    if (valueText.isBlank()) {
+        return NumberRangeClampResult("", null)
+    }
+
+    val value = valueText.toDoubleOrNull()
+        ?: return NumberRangeClampResult(
+            valueText,
+            "输入超出范围，范围为 ${formatRangeNumber(min)}-${formatRangeNumber(max)}"
+        )
+    val clampedValue = value.coerceIn(min, max)
+    return if (value == clampedValue) {
+        NumberRangeClampResult(valueText = valueText, errorText = null)
+    } else {
+        NumberRangeClampResult(
+            valueText = formatRangeNumber(clampedValue),
+            errorText = "输入超出范围，范围为 ${formatRangeNumber(min)}-${formatRangeNumber(max)}"
+        )
+    }
+}
+
+fun formatRangeNumber(value: Double): String {
+    return if (value % 1.0 == 0.0) {
+        String.format(Locale.US, "%.0f", value)
+    } else {
+        String.format(Locale.US, "%.4f", value).trimEnd('0').trimEnd('.')
+    }
 }
 
 data class JobTransferBonus(
@@ -4479,7 +4685,10 @@ fun CalculatorNumberField(
     modifier: Modifier = Modifier,
     placeholderText: String? = null,
     enabled: Boolean = true,
-    persistenceKey: String = "calculator_input_$label"
+    persistenceKey: String = "calculator_input_$label",
+    allowDecimal: Boolean = true,
+    maxDecimalPlaces: Int? = null,
+    trailingContent: (@Composable () -> Unit)? = null
 ) {
     val context = LocalContext.current
     val prefs = remember {
@@ -4509,7 +4718,11 @@ fun CalculatorNumberField(
         value = fieldValue,
         enabled = enabled,
         onValueChange = { newValue ->
-            val filteredText = newValue.text.filter { it.isDigit() || it == '.' }
+            val filteredText = filterCalculatorNumberText(
+                text = newValue.text,
+                allowDecimal = allowDecimal,
+                maxDecimalPlaces = maxDecimalPlaces
+            )
             fieldValue = newValue.copy(
                 text = filteredText,
                 selection = TextRange(newValue.selection.end.coerceAtMost(filteredText.length))
@@ -4519,6 +4732,7 @@ fun CalculatorNumberField(
                 prefs.edit { putString(persistenceKey, filteredText) }
             }
         },
+        trailingIcon = trailingContent,
         label = { Text(label) },
         placeholder = if (placeholderText != null && !isFocused) {
             {
@@ -4554,7 +4768,10 @@ fun ValidatedNumberField(
     placeholderText: String? = null,
     errorText: String? = null,
     enabled: Boolean = true,
-    persistenceKey: String = "calculator_input_$label"
+    persistenceKey: String = "calculator_input_$label",
+    allowDecimal: Boolean = true,
+    maxDecimalPlaces: Int? = null,
+    trailingContent: (@Composable () -> Unit)? = null
 ) {
     Box(modifier = modifier) {
         CalculatorNumberField(
@@ -4563,7 +4780,10 @@ fun ValidatedNumberField(
             onValueChange = onValueChange,
             placeholderText = placeholderText,
             enabled = enabled,
-            persistenceKey = persistenceKey
+            persistenceKey = persistenceKey,
+            allowDecimal = allowDecimal,
+            maxDecimalPlaces = maxDecimalPlaces,
+            trailingContent = trailingContent
         )
 
         if (errorText != null) {
@@ -4589,6 +4809,8 @@ fun RangeLimitedNumberField(
     placeholderText: String? = null,
     enabled: Boolean = true,
     persistenceKey: String = "calculator_input_$label",
+    trailingContent: (@Composable () -> Unit)? = null,
+    maxDecimalPlaces: Int? = null,
     onRangeCorrection: (NumberRangeClampResult) -> Unit = {}
 ) {
     RangeLimitedNumberField(
@@ -4601,6 +4823,7 @@ fun RangeLimitedNumberField(
         placeholderText = placeholderText,
         enabled = enabled,
         persistenceKey = persistenceKey,
+        trailingContent = trailingContent,
         onRangeCorrection = onRangeCorrection
     )
 }
@@ -4616,6 +4839,8 @@ fun RangeLimitedNumberField(
     placeholderText: String? = null,
     enabled: Boolean = true,
     persistenceKey: String = "calculator_input_$label",
+    maxDecimalPlaces: Int? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
     onRangeCorrection: (NumberRangeClampResult) -> Unit = {}
 ) {
     val safeMin = min.coerceAtMost(max)
@@ -4644,8 +4869,130 @@ fun RangeLimitedNumberField(
         placeholderText = placeholderText,
         errorText = if (enabled) errorText else null,
         enabled = enabled,
-        persistenceKey = persistenceKey
+        persistenceKey = persistenceKey,
+        allowDecimal = false,
+        trailingContent = trailingContent
     )
+}
+
+@Composable
+fun RangeLimitedDecimalNumberField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    min: Double,
+    max: Double,
+    modifier: Modifier = Modifier,
+    placeholderText: String? = null,
+    enabled: Boolean = true,
+    persistenceKey: String = "calculator_input_$label",
+    maxDecimalPlaces: Int? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
+    onRangeCorrection: (NumberRangeClampResult) -> Unit = {}
+) {
+    val safeMin = min.coerceAtMost(max)
+    val safeMax = max.coerceAtLeast(min)
+    var correctionText by remember(safeMin, safeMax) { mutableStateOf<String?>(null) }
+    val errorText = correctionText ?: validationRangeError(
+        valueText = value,
+        min = safeMin,
+        max = safeMax
+    )
+
+    ValidatedNumberField(
+        label = label,
+        value = value,
+        onValueChange = { input ->
+            val normalizedValue = clampNumberTextToRange(
+                valueText = input,
+                min = safeMin,
+                max = safeMax
+            )
+            onValueChange(normalizedValue.valueText)
+            correctionText = normalizedValue.errorText
+            onRangeCorrection(normalizedValue)
+        },
+        modifier = modifier,
+        placeholderText = placeholderText,
+        errorText = if (enabled) errorText else null,
+        enabled = enabled,
+        persistenceKey = persistenceKey,
+        allowDecimal = true,
+        maxDecimalPlaces = maxDecimalPlaces,
+        trailingContent = trailingContent
+    )
+}
+
+@Composable
+fun UpgradeExpUnitTrailingButton(
+    unit: UpgradeExpUnit,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Row(
+        modifier = Modifier
+            .height(32.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .height(24.dp)
+                .background(Color(0xFFD0D0D0))
+        )
+
+        Box(
+            modifier = Modifier
+                .width(44.dp)
+                .height(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = unit.label,
+                fontSize = 14.sp,
+                color = Color(0xFF222222),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+fun filterCalculatorNumberText(
+    text: String,
+    allowDecimal: Boolean,
+    maxDecimalPlaces: Int? = null
+): String {
+    if (!allowDecimal) {
+        return text.filter { it.isDigit() }
+    }
+
+    var hasDot = false
+    var decimalCount = 0
+    val safeMaxDecimalPlaces = maxDecimalPlaces?.coerceAtLeast(0)
+    return buildString {
+        text.forEach { char ->
+            when {
+                char.isDigit() -> {
+                    if (!hasDot || safeMaxDecimalPlaces == null || decimalCount < safeMaxDecimalPlaces) {
+                        append(char)
+                        if (hasDot) {
+                            decimalCount += 1
+                        }
+                    }
+                }
+                char == '.' && !hasDot -> {
+                    append(char)
+                    hasDot = true
+                }
+            }
+        }
+    }
 }
 
 @Composable
