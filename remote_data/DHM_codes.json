@@ -1,5 +1,23 @@
 [
   {
+    "id": "limited-2026-07-08-astrology-contract-rise",
+    "code": "星象合约节节高",
+    "title": "限时兑换码",
+    "description": "2026年7月8日至2026年7月15日可用。",
+    "startDate": "2026-07-08",
+    "endDate": "2026-07-15",
+    "rewards": [
+      {
+        "name": "命运果实",
+        "quantity": 1
+      },
+      {
+        "name": "晨星",
+        "quantity": 200
+      }
+    ]
+  },
+  {
     "id": "limited-2026-07-01-radio-wave-costume",
     "code": "电波幻装电力满格",
     "title": "限时兑换码",
