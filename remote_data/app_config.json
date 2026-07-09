@@ -24,7 +24,7 @@
       "url": "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/XQF_Announcements.json"
     },
     "officialNotices": {
-      "version": 2,
+      "version": 3,
       "url": "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/ZSF_Announcements.json"
     },
     "dungeonDetails": {
