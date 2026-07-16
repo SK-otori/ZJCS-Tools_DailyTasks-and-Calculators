@@ -5,7 +5,17 @@
     "title": "限时兑换码",
     "description": "2026年7月15日至2026年7月22日可用。",
     "startDate": "2026-07-15",
-    "endDate": "2026-07-22"
+    "endDate": "2026-07-22",
+    "rewards": [
+      {
+        "name": "命运果实",
+        "quantity": 1
+      },
+      {
+        "name": "星之愿",
+        "quantity": 1
+      }
+    ]
   },
   {
     "id": "limited-2026-07-08-astrology-contract-rise",

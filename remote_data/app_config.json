@@ -16,7 +16,7 @@
   },
   "dataFiles": {
     "exchangeCodes": {
-      "version": 7,
+      "version": 8,
       "url": "https://zjcs-tools-otori-database.oss-cn-shanghai.aliyuncs.com/DHM_codes.json"
     },
     "updatePreviewNotices": {
